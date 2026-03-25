@@ -4,7 +4,7 @@ library(stringr)
 rev_yr <- 2025
 
 ########## CONNECT TO WIISE ########## 
-# set working directory to Immunization OneDrive
+# set working directory to For-Grace OneDrive
 USERNAME <- Sys.getenv("USER")
 UserDir <- file.path("/Users", USERNAME, "Library/CloudStorage/OneDrive-SharedLibraries-UNICEF")
 wd <- file.path("/Users", USERNAME, "Library/CloudStorage/OneDrive-SharedLibraries-UNICEF/Health-HIV Data & Analytics - For-Grace")
