@@ -3,22 +3,11 @@
 # Author: Grace Legris, glegris@unicef.org
 # ==========================================================================================================================================
 
-remove(list = ls())
-
-# file paths
-USERNAME <- Sys.getenv("USER")
-UserDir <- file.path("/Users", USERNAME, "Library/CloudStorage/OneDrive-SharedLibraries-UNICEF")
-wd <- file.path("/Users", USERNAME, "Library/CloudStorage/OneDrive-SharedLibraries-UNICEF/Health-HIV Data & Analytics - For-Grace")
-utils <- file.path(wd, "utils")
-dq_folder <- file.path(UserDir, "Health-HIV Data & Analytics - 2025 rev/unicef-products/dummy/data-quality")
-PrjDir <- file.path(dq_folder, "DQProduct")
-DataDir <- file.path(PrjDir, "data") 
-
 # most recent year of data available
 rev_yr <- 2025
 
 # country names/regions and list of unicef/wuenic countries (195)
-reg_ref <- read_csv(file.path(utils, paste0('regional-groups_', rev_yr + 1, '-release.csv'))) %>% 
+reg_ref <- read_csv(file.path(DummyUtils, paste0('regional-groups_', rev_yr + 1, '-release.csv'))) %>% 
   select(iso3c, country, region_unicef_ops, wuenic)
 wuenic_list <- pull(filter(reg_ref, !is.na(wuenic)), iso3c)
 
@@ -27,7 +16,6 @@ wiise_admin_official <- readRDS(file.path(DataDir, paste0("wiise_admin_official_
 wiise_sched <- readRDS(file.path(DataDir, "wiise_schedule.rds"))
 wuenic_control <- readRDS(file.path(DataDir, "wuenic_control.rds"))
 v_ref_pop <- readRDS(file.path(DataDir, "v_ref_populations.rds"))
-
 
 ## ---------------------------------------------------------------------------------------------------------------------
 ### Data Prep
