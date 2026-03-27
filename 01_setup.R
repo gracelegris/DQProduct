@@ -64,11 +64,90 @@ sched_summary <- sched_summary %>%
   relocate(country, .after = iso3c) %>% 
   arrange(country)
 
-# filter schedules to most recent year provided by each country
+# filter schedules to only WUENIC-relevant vaccines
+# list of wuenic-relevant vaccines mapping wiise codes to standard antigens
+wuenic_vaccine_map <- list(
+  # tuberculosis
+  "BCG" = c("BCG", "AD_BCG_AD"),
+  
+  # diphtheria, tetanus, pertussis (including combinations)
+  "DTP" = c(
+    "DTWP", "DTAP", "DTWPHIB", "DTAPHIB", "DTWPHIBHEPB", "DTAPHIBHEPB",
+    "DTWPHIBIPV", "DTAPHIBIPV", "DTWPHIBHEPBIPV", "DTAPHIBHEPBIPV",
+    "DTWPHEPB", "DTWPHEPBIPV", "DTAPHEPBIPV", "DTAPIPV"
+  ),
+  
+  # td group for maternal/adult tetanus & diphtheria protection
+  # "TD" = c(
+  #   "TD_S", "TDAP_S", "TDAP_S_IPV", "TT", "D_S", "DT", "DIP", "DIPHTERIA"
+  # ),
+  
+  # polio
+  "POL" = c("OPV", "IPV", "IPV_FRAC", "DTIPV", "TDIPV_S"),
+  
+  # measles, mumps, rubella
+  "MCV" = c("MEASLES", "MR", "MMR", "MMRV", "MM", "RUBELLA", "MUMPS"),
+  
+  # hepatitis b
+  "HEPB" = c("HEPB_PEDIATRIC", "HEPB_ADULT", "HEPA_HEPB"),
+  
+  # haemophilus influenzae type b
+  "HIB" = c("HIB", "HIBMENC", "HIB_MEN_C_CONJ"),
+  
+  # pneumococcal conjugate vaccine
+  "PCV" = c(
+    "PCV7", "PCV10", "PCV13", "PCV20", "PCV_14_VALENT", 
+    "PCV_15_VALENT", "PNEUMO_CONJ"
+  ),
+  
+  # rotavirus
+  "ROTAVIRUS" = c("ROTAVIRUS", "ROTAVIRUS_1", "ROTAVIRUS_5"),
+  
+  # human papillomavirus
+  "HPV" = c("HPV", "HPV2", "HPV4", "HPV9"),
+  
+  # yellow fever
+  "YF" = c("YF"),
+  
+  # meningococcal
+  "MEN" = c(
+    "MEN_A_CONJ", "MEN_A_PS", "MEN_B", "MenB", "MEN_C_CONJ", "MEN_AC", 
+    "MEN_AC_PS", "MEN_BC", "MEN_ACW", "MEN_ACW_PS", "MEN_ACYW_135CONJ", 
+    "MEN_ACYW_135PS", "MEN_ACYWX_CONJ"
+  ),
+  
+  # others tracked by wuenic/who
+  "MALARIA" = c("MALARIA"),
+  "TYPHOID" = c("TYPHOID_CONJ", "TYPHOID_PS", "TYPHOIDHEPA"),
+  "JE"      = c("JE_LIVEATD", "JE_INACTD"),
+  "CHOLERA" = c("CHOLERA")
+)
+
 sched_summary <- sched_summary %>%
+  mutate(vaccine_group = case_when(
+    vaccinecode %in% wuenic_vaccine_map$BCG ~ "BCG",
+    vaccinecode %in% wuenic_vaccine_map$DTP ~ "DTP",
+    #vaccinecode %in% wuenic_vaccine_map$TD ~ "TD",
+    vaccinecode %in% wuenic_vaccine_map$POL ~ "POL",
+    vaccinecode %in% wuenic_vaccine_map$MCV ~ "MCV",
+    vaccinecode %in% wuenic_vaccine_map$HEPB ~ "HEPB",
+    vaccinecode %in% wuenic_vaccine_map$HIB ~ "HIB",
+    vaccinecode %in% wuenic_vaccine_map$PCV ~ "PCV",
+    vaccinecode %in% wuenic_vaccine_map$ROTAVIRUS ~ "ROTAVIRUS",
+    vaccinecode %in% wuenic_vaccine_map$HPV ~ "HPV",
+    vaccinecode %in% wuenic_vaccine_map$YF ~ "YF",
+    vaccinecode %in% wuenic_vaccine_map$MEN ~ "MEN",
+    vaccinecode %in% wuenic_vaccine_map$MALARIA ~ "MALARIA",
+    vaccinecode %in% wuenic_vaccine_map$TYPHOID ~ "TYPHOID",
+    vaccinecode %in% wuenic_vaccine_map$JE ~ "JE",
+    vaccinecode %in% wuenic_vaccine_map$CHOLERA ~ "CHOLERA"))
+
+# filter schedules to most recent year provided by each country
+sched_summary_recent <- sched_summary %>%
   group_by(iso3c) %>%
   filter(year == max(year)) %>%
   ungroup()
+
 
 # ── 3. wuenic_control ─────────────────────────────────────────────────────────
 # keep only columns useful for DQ report, filter to rev_yr range
