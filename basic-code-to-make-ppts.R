@@ -1,3 +1,8 @@
+
+source("user_profiles.R")
+source("figs_tables_ppt.R")
+source(file.path(DummyUtils, "R/slide_production_funcs.R"))
+
 library(officer)
 
 ## functions ----
@@ -16,14 +21,16 @@ func_slide_txt <- function(txt) {
 ## functions ----
 
 ## convert charts to dml objects ----
-ggplot_objects = list("gg_map_pol3" = gg_map_pol3,
-                      "gg_map_ipv1" = gg_map_ipv1,
-                      "gg_map_ipv2" = gg_map_ipv2,
-                      "gg_stacked_bar" = gg_stacked_bar,
-                      "gg_trends_pol3" = gg_trends_pol3,
-                      "gg_trends_ipv1" = gg_trends_ipv1,
-                      "gg_trends_line" = gg_trends_line,
-                      "gg_bar_cases" = gg_bar_cases
+ggplot_objects = list("plt_perc_change_no_line" = plt_perc_change_no_line,
+                      "plt_perc_change_line" = plt_perc_change_line,
+                      "plt_all_vax_heatmap" = plt_all_vax_heatmap
+                      #"tbl_schedule" = tbl_schedule
+                      # "gg_map_ipv2" = gg_map_ipv2,
+                      # "gg_stacked_bar" = gg_stacked_bar,
+                      # "gg_trends_pol3" = gg_trends_pol3,
+                      # "gg_trends_ipv1" = gg_trends_ipv1,
+                      # "gg_trends_line" = gg_trends_line,
+                      # "gg_bar_cases" = gg_bar_cases
 )
 
 # loop over plots to convert to editable dml objects
@@ -42,15 +49,31 @@ for (name in names(ggplot_objects)) {
 
 ## ppt ----
 # Load the existing PowerPoint document
-doc <- read_pptx("xxx/blank-slide-master.pptx")
+doc <- read_pptx(file.path(UtilsDir, "blank-slide-master.pptx"))
 
 # use the function to paste dml plots to ppt and the corresponding narrative
-func_slide(dml_gg_map_pol3)
-func_slide_txt(gg_map_pol3_txt)
-## ppt ----
+
+## ======================================================================================================================
+### Create Slides
+## ======================================================================================================================
+
+# title slide with country name
+doc <- ph_with(doc, value = fpar(ftext(CountryName, prop = fp_text(font.size = 36, bold = TRUE, font.family = "Calibri", color = "black"))),
+               location = ph_location(left = 1, top = 3, width = 8, height = 1.5))
+
+# slides: vaccine schedule & stockouts
+func_slide(tbl_schedule) # vaccine schedule
+func_slide(tbl_intro) # vaccine introduction years
+func_slide(tbl_stock) # stockouts
+
+# section: coverage & outlier detection
+func_slide(dml_plt_all_vax_heatmap)
+func_slide(dml_plt_perc_change_no_line)
+func_slide(dml_plt_perc_change_line)
+func_slide_txt(schedule_change_note)
 
 # save ppt
-print(doc, "xxx/xxxx.pptx")
+print(doc, file.path(OutputDir, paste0(tolower(Current_ISO3), "_", Year, "_test.pptx")))
 
 
 
