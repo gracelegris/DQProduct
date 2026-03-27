@@ -32,6 +32,19 @@ USERNAME <- Sys.getenv("USER")
 # dir.create("~/Library/Application Support/AzureR", recursive = TRUE, showWarnings = FALSE)
 # options(azure_auth_create_dir = TRUE)
 
+# file paths
+UserDir <- file.path("/Users", USERNAME, "Library/CloudStorage/OneDrive-SharedLibraries-UNICEF")
+wd <- file.path("/Users", USERNAME, "Library/CloudStorage/OneDrive-SharedLibraries-UNICEF/Health-HIV Data & Analytics - For-Grace")
+dq_folder <- file.path(UserDir, "Health-HIV Data & Analytics - 2025 rev/unicef-products/dummy/data-quality")
+PrjDir <- file.path(dq_folder, "DQProduct")
+DataDir <- file.path(PrjDir, "data")
+SubnatFuncDir <- file.path(UserDir, "Health-HIV Data & Analytics - Subnational data analysis/utils/R")
+DummyUtils <- file.path(UserDir, "Health-HIV Data & Analytics - 2025 rev/unicef-products/dummy/utils")
+UtilsDir <- file.path(wd, "utils")
+OutputDir <- file.path(PrjDir, "outputs")
+RevDir <- str_glue(file.path(UserDir, "Health-HIV Data & Analytics - {rev_yr} rev"))
+wiisefolder <- str_glue(file.path(RevDir, "unicef-products/{type}/wiise-outputs"))
+DummyDataDir <- str_glue(file.path(RevDir, "wuenic_master/dummy"))
 
 # Load libraries
 library(tidyverse)
@@ -70,8 +83,19 @@ library(ggpubr)      # save to pdf
 library(pals)        # distinct colour palettes: https://stackoverflow.com/questions/9563711/r-color-palettes-for-many-data-classes
 library(ggtext)      # fixes alignment on geom_richtext when adjusting vjust :: geom_richtext()
 library(showtext)
+library(lubridate)
+library(flextable)
+library(kableExtra)
+library(webshot2)
+
 font_add_google("Roboto", "roboto")
 showtext_auto()
+
+# highlight styles for powerpoint
+highlightStyle1 <- openxlsx::createStyle(fgFill = "#FFFFCC") # Use bgFill instead of bgColor
+highlightStyle2 <- openxlsx::createStyle(fgFill = "#FFC20E") # Use bgFill instead of bgColor
+highlightStyle3 <- openxlsx::createStyle(fgFill = "#F26A21") # Use bgFill instead of bgColor
+highlightStyle4 <- openxlsx::createStyle(fgFill = "#E2231A") # Use bgFill instead of bgColor
 
 unicef_colors <- c("#0058AB","#1CABE2","#00833D","#80BD41","#6A1E74",
                    "#961A49","#E2231A","#F26A21","#FFC20E","#FFF09C")
