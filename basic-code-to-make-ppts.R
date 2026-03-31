@@ -8,7 +8,7 @@ library(officer)
 ## functions ----
 # function for slides
 func_slide <- function(dml) {
-  doc <- doc %>% add_slide(layout = "blank", master = "Office Theme")   # replace "blank" with the name of slide in the slide master
+  doc <- doc %>% add_slide(layout = "blank", master = "Office Theme")
   doc <- ph_with(x = doc, value = dml, location = ph_location("body", left = 0.3, top = 0.4, width = 12, height = 7))
 }
 
@@ -21,12 +21,16 @@ func_slide_txt <- function(txt) {
 ## functions ----
 
 ## convert charts to dml objects ----
-ggplot_objects = list("plt_perc_change_no_line" = plt_perc_change_no_line,
+ggplot_objects = list(#"plt_perc_change_no_line" = plt_perc_change_no_line,
                       "plt_perc_change_line" = plt_perc_change_line,
-                      "plt_all_vax_heatmap" = plt_all_vax_heatmap
-                      #"tbl_schedule" = tbl_schedule
-                      # "gg_map_ipv2" = gg_map_ipv2,
-                      # "gg_stacked_bar" = gg_stacked_bar,
+                      "plt_all_vax_heatmap" = plt_all_vax_heatmap,
+                      "plt_coverage_flags" = plt_coverage_flags,
+                      "plt_admin_vs_wuenic" = plt_admin_vs_wuenic,
+                      "plt_denom_change" = plt_denom_change,
+                      "plt_births_vs_si" = plt_births_vs_si,
+                      "plt_dropout" = plt_dropout,
+                      "plt_6wk" = plt_6wk,
+                      "plt_14wk" = plt_14wk
                       # "gg_trends_pol3" = gg_trends_pol3,
                       # "gg_trends_ipv1" = gg_trends_ipv1,
                       # "gg_trends_line" = gg_trends_line,
@@ -68,12 +72,24 @@ func_slide(tbl_stock) # stockouts
 
 # section: coverage & outlier detection
 func_slide(dml_plt_all_vax_heatmap)
-func_slide(dml_plt_perc_change_no_line)
+func_slide(dml_plt_coverage_flags)
+#func_slide(dml_plt_perc_change_no_line)
 func_slide(dml_plt_perc_change_line)
-func_slide_txt(schedule_change_note)
+func_slide(dml_plt_admin_vs_wuenic)
+#func_slide_txt(schedule_change_note)
+
+# section: denominators
+func_slide(dml_plt_denom_change)
+func_slide(dml_plt_births_vs_si)
+
+# section: dropout & vaccine relationships
+func_slide(dml_plt_dropout)
+func_slide(dml_plt_6wk)
+func_slide(dml_plt_14wk)
+
 
 # save ppt
-print(doc, file.path(OutputDir, paste0(tolower(Current_ISO3), "_", Year, "_test.pptx")))
+print(doc, file.path(OutputDir, paste0(tolower(Current_ISO3), "_", rev_yr, "_test.pptx")))
 
 
 
