@@ -63,7 +63,8 @@ wuenic_master <- wuenic_master %>%
                              Vaccine == "hpvc" ~ "HPVc",
                              TRUE ~ toupper(Vaccine)))
 
-wuenic_master$Vaccine <- factor(wuenic_master$Vaccine, levels = c("BCG", "HepBB", "DTP1", "DTP3", "Hib3", "HepB3", "PCVC", "RotaC", "POL3", "IPV1", "IPVC", "MCV1", "RCV1", "MCV2", "YFV", "MengA","HPVc"))
+wuenic_master$Vaccine <- factor(wuenic_master$Vaccine, levels = c("BCG", "HepBB", "DTP1", "DTP3", "Hib3", "HepB3", "PCVC", "RotaC", 
+                                                                  "POL3", "IPV1", "IPVC", "MCV1", "RCV1", "MCV2", "YFV", "MengA","HPVc"))
 
 # cty_outline_shp <- cty_outline_shp %>%
 #   st_make_valid() %>%
@@ -300,9 +301,9 @@ gap_data <- wuenic_master %>%
   )
 
 plt_admin_vs_wuenic <- ggplot(gap_data, aes(x = Year)) +
-  geom_ribbon(aes(ymin = pmin(AdministrativeCoverage, WUENIC),
-                  ymax = pmax(AdministrativeCoverage, WUENIC),
-                  fill = flag_large_gap), alpha = 0.2) +
+  # geom_ribbon(aes(ymin = pmin(AdministrativeCoverage, WUENIC),
+  #                 ymax = pmax(AdministrativeCoverage, WUENIC),
+  #                 fill = flag_large_gap), alpha = 0.2) +
   geom_line(aes(y = WUENIC,                linetype = "WUENIC"), color = "#0083CF", linewidth = 0.9) +
   geom_line(aes(y = AdministrativeCoverage, linetype = "Admin"), color = "black",   linewidth = 0.9) +
   geom_point(aes(y = AdministrativeCoverage, color = flag_large_gap), size = 2) +
@@ -316,8 +317,8 @@ plt_admin_vs_wuenic <- ggplot(gap_data, aes(x = Year)) +
   scale_x_continuous(breaks = seq(min(gap_data$Year), max(gap_data$Year), by = 2)) +
   theme_minimal() +
   labs(
-    title = paste("Admin vs WUENIC Coverage Estimate,", CountryName),
-    subtitle = "Red shading indicates gaps > 20 percentage points — suggests potential data quality issues",
+    title = paste("Admin vs. WUENIC Coverage Estimate,", CountryName),
+    subtitle = "Red dots indicate gaps > 20 percentage points — suggests potential data quality issues",
     x = "Year", y = "Coverage (%)",
     color = "Large Gap", fill = "Large Gap", linetype = "Source"
   ) +
@@ -326,6 +327,67 @@ plt_admin_vs_wuenic <- ggplot(gap_data, aes(x = Year)) +
     axis.text.x  = element_text(angle = 45, hjust = 1, size = 8),
     axis.ticks.x = element_line(color = "black"),
     panel.border = element_rect(color = "black", fill = NA, size = 0.6),
+    strip.background = element_rect(fill = "#0083CF"),
+    strip.text = element_text(color = "white", face = "bold"),
+    plot.title = element_text(hjust = 0.5, size = 14),
+    plot.subtitle = element_text(hjust = 0.5, size = 11)
+  )
+
+## ---------------------------------------------------------------------------------------------------------------------
+### Plot: Admin coverage vs Official coverage — large gaps flagged (using wiise_admin_official)
+## ---------------------------------------------------------------------------------------------------------------------
+
+gap_data_2 <- wiise_admin_official %>%
+  filter(country == Current_ISO3) %>% 
+  select(country, vaccine, annum, type, coverage) %>%
+  filter(type %in% c("admin", "official")) %>%
+  pivot_wider(names_from = type, values_from = coverage) %>%
+  mutate(
+    gap = admin - official,
+    flag_large_gap = abs(gap) > 20
+  ) %>% 
+  filter(vaccine != "YFV") %>% 
+  mutate(vaccine = case_when(vaccine == "HEPBB" ~ "HepBB",
+                             vaccine == "HEPB3" ~ "HepB3",
+                             vaccine == "HIB3" ~ "Hib3",
+                             vaccine == "ROTAC" ~ "RotaC",
+                             vaccine == "MENGA" ~ "MengA",
+                             vaccine == "HPVC" ~ "HPVc",
+                             vaccine == "IPV2" ~ "IPVC",
+                             vaccine == "PCV3" ~ "PCVC",
+                             TRUE ~ vaccine))
+
+gap_data_2$vaccine <- factor(gap_data_2$vaccine, levels = c("BCG", "HepBB", "DTP1", "DTP3", "Hib3", "HepB3", "PCVC", "RotaC", 
+                                                                  "POL3", "IPV1", "IPVC", "MCV1", "RCV1", "MCV2", "YFV", "MengA","HPVc"))
+
+plt_admin_vs_official <- ggplot(gap_data_2, aes(x = annum)) +
+  geom_line(aes(y = official, linetype = "Official"), color = "#0083CF", linewidth = 0.9) +
+  geom_line(aes(y = admin, linetype = "Admin"), color = "black",   linewidth = 0.9) +
+  geom_point(aes(y = admin, color = flag_large_gap), size = 2) +
+  facet_wrap(~vaccine) +
+  scale_y_continuous(
+    limits = c(
+      floor(min(gap_data_2$admin, na.rm = TRUE) / 25) * 25,
+      ceiling(max(gap_data_2$admin, na.rm = TRUE) / 25) * 25
+    ),
+    breaks = seq(0, 100, by = 25)
+  ) +
+  scale_color_manual(values = c("FALSE" = "black", "TRUE" = "red")) +
+  scale_linetype_manual(values = c("Official" = "solid", "Admin" = "solid")) +
+  scale_x_continuous(breaks = seq(min(gap_data_2$annum, na.rm = TRUE), 
+                                   max(gap_data_2$annum, na.rm = TRUE), by = 2)) +
+  theme_minimal() +
+  labs(
+    title = paste("Admin vs. Official Coverage Estimate,", unique(gap_data$country)),
+    subtitle = "Red dots indicate gaps > 20 percentage points — suggests potential data quality issues",
+    x = "Year", y = "Coverage (%)",
+    color = "Large Gap", linetype = "Source"
+  ) +
+  theme(
+    legend.position = "bottom",
+    axis.text.x  = element_text(angle = 45, hjust = 1, size = 8),
+    axis.ticks.x = element_line(color = "black"),
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.6),
     strip.background = element_rect(fill = "#0083CF"),
     strip.text = element_text(color = "white", face = "bold"),
     plot.title = element_text(hjust = 0.5, size = 14),
@@ -695,7 +757,7 @@ plt_14wk <- plot_data %>%
   )
 
 # ======================================================================================================================
-### Missing Data
+### Missing Data Heatmap (Admin Data)
 # ======================================================================================================================
 
 # ensure all vaccine/year combinations exist and flag missingness (observed vaccines in country only)
@@ -715,8 +777,8 @@ plt_missing_heatmap <- ggplot(heatmap_data_wuenic, aes(x = factor(Year), y = Vac
   scale_fill_manual(values = c("Missing" = "#E2231A", "Present" = "#00833D")) +
   theme_minimal() +
   labs(
-    title = paste("WUENIC Data Availability Heatmap -", CountryName),
-    subtitle = "Red indicates missing WUENIC coverage values for that year/vaccine",
+    title = paste("Admin Data Availability Heatmap -", CountryName),
+    subtitle = "Red indicates missing Admin coverage values for that year/vaccine",
     x = "Year", y = "Vaccine",
     fill = "Data Status"
   ) +
@@ -728,9 +790,6 @@ plt_missing_heatmap <- ggplot(heatmap_data_wuenic, aes(x = factor(Year), y = Vac
     plot.subtitle = element_text(hjust = 0.5, size = 12)
   )
 
-# ======================================================================================================================
-### Admin vs. Official Comparison
-# ======================================================================================================================
 
 # ======================================================================================================================
 ### Data Prep
