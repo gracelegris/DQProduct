@@ -21,21 +21,23 @@ func_slide_txt <- function(txt) {
 ## functions ----
 
 ## convert charts to dml objects ----
-ggplot_objects = list(#"plt_perc_change_no_line" = plt_perc_change_no_line,
+ggplot_objects = list("plt_all_vax_line" = plt_all_vax_line,
+                      "plt_selected_vax_line" = plt_selected_vax_line,
                       "plt_perc_change_line" = plt_perc_change_line,
+                      "plt_selected_coverage_flags" = plt_selected_coverage_flags,
                       "plt_all_vax_heatmap" = plt_all_vax_heatmap,
+                      "plt_summary_table" = plt_summary_table,
                       "plt_coverage_flags" = plt_coverage_flags,
+                      "plt_admin_vs_official" = plt_admin_vs_official,
                       "plt_admin_vs_wuenic" = plt_admin_vs_wuenic,
                       "plt_denom_change" = plt_denom_change,
                       "plt_births_vs_si" = plt_births_vs_si,
-                      "plt_dropout" = plt_dropout,
+                      "plt_denom_pct_change" = plt_denom_pct_change,
+                      "plt_dropout_with_rate" = plt_dropout_with_rate,
+                      "plt_coadmin_dtp_pcv" = plt_coadmin_dtp_pcv,
                       "plt_6wk" = plt_6wk,
-                      "plt_14wk" = plt_14wk
-                      # "gg_trends_pol3" = gg_trends_pol3,
-                      # "gg_trends_ipv1" = gg_trends_ipv1,
-                      # "gg_trends_line" = gg_trends_line,
-                      # "gg_bar_cases" = gg_bar_cases
-)
+                      "plt_14wk" = plt_14wk,
+                      "plt_missing_heatmap" = plt_missing_heatmap)
 
 # loop over plots to convert to editable dml objects
 for (name in names(ggplot_objects)) {
@@ -52,14 +54,14 @@ for (name in names(ggplot_objects)) {
 ## convert charts to dml objects ----
 
 ## ppt ----
-# Load the existing PowerPoint document
-doc <- read_pptx(file.path(UtilsDir, "blank-slide-master.pptx"))
 
-# use the function to paste dml plots to ppt and the corresponding narrative
 
 ## ======================================================================================================================
 ### Create Slides
 ## ======================================================================================================================
+
+# blank ppt template
+doc <- read_pptx(file.path(UtilsDir, "blank-slide-master.pptx"))
 
 # title slide with country name
 doc <- ph_with(doc, value = fpar(ftext(CountryName, prop = fp_text(font.size = 36, bold = TRUE, font.family = "Calibri", color = "black"))),
@@ -72,28 +74,28 @@ func_slide(tbl_stock) # stockouts
 
 # section: coverage & outlier detection
 func_slide(dml_plt_all_vax_heatmap)
+func_slide(dml_plt_summary_table)
+func_slide(dml_plt_all_vax_line)
+func_slide(dml_plt_selected_vax_line)
 func_slide(dml_plt_coverage_flags)
-#func_slide(dml_plt_perc_change_no_line)
-func_slide(dml_plt_perc_change_line)
+func_slide(dml_plt_selected_coverage_flags)
+func_slide(dml_plt_admin_vs_official)
 func_slide(dml_plt_admin_vs_wuenic)
-#func_slide_txt(schedule_change_note)
 
-# section: denominators
+# section: numerators & denominators
+func_slide(dml_plt_perc_change_line)
 func_slide(dml_plt_denom_change)
 func_slide(dml_plt_births_vs_si)
+func_slide(dml_plt_denom_pct_change)
 
 # section: dropout & vaccine relationships
-func_slide(dml_plt_dropout)
+func_slide(dml_plt_dropout_with_rate)
+func_slide(dml_plt_coadmin_dtp_pcv)
 func_slide(dml_plt_6wk)
 func_slide(dml_plt_14wk)
 
+# section: missingness
+func_slide(dml_plt_missing_heatmap)
 
 # save ppt
 print(doc, file.path(OutputDir, paste0(tolower(Current_ISO3), "_", rev_yr, "_test.pptx")))
-
-
-
-
-
-
-
