@@ -4,48 +4,6 @@ USERNAME    <- Sys.getenv("USERNAME")
 USERPROFILE <- Sys.getenv("USERPROFILE")
 USERNAME <- Sys.getenv("USER")
 
-# if (USERNAME == "laure"){
-#   wd <- "C:/Users/laure/OneDrive - UNICEF"
-# }
-
-
-# if (USERNAME == "ykawa"){
-#   prg_folder <- "C:/Users/ykawa/UNICEF/Health-HIV Data & Analytics - Documents/Immunization/Projects and products/Subnational data analysis" 
-#   wd         <- "C:/Users/ykawa/UNICEF/Health-HIV Data & Analytics - Documents"  
-#   ahead      <- "C:/Users/ykawa/UNICEF/Health-HIV Data & Analytics - Documents/UNICEF Ahead Database/01 Administrative Data"
-#   git        <- "C:/Users/ykawa/GitHub/AHEAD"
-# }
-# 
-# if (USERNAME == "okiya"){
-#   prg_folder <- "C:/Users/okiya/UNICEF/Health-HIV Data & Analytics - Subnational data analysis" 
-#   #wd         <- ""  
-#   #ahead      <- ""
-#   #git        <- ""
-# }
-# 
-# if (USER == "UNICEF") { # grace
-#   prg_folder <- "/Users/UNICEF/Library/CloudStorage/OneDrive-SharedLibraries-UNICEF/Health-HIV Data & Analytics - Subnational data analysis" 
-#   EthDir <- "/Users/UNICEF/Documents/unicef_local/ethiopia_cleaning"
-# }
-
-# # Pre-create directory for AzureAuth
-# dir.create("~/Library/Application Support/AzureR", recursive = TRUE, showWarnings = FALSE)
-# options(azure_auth_create_dir = TRUE)
-
-# file paths
-UserDir <- file.path("/Users", USERNAME, "Library/CloudStorage/OneDrive-SharedLibraries-UNICEF")
-wd <- file.path("/Users", USERNAME, "Library/CloudStorage/OneDrive-SharedLibraries-UNICEF/Health-HIV Data & Analytics - For-Grace")
-dq_folder <- file.path(UserDir, "Health-HIV Data & Analytics - 2025 rev/unicef-products/dummy/data-quality")
-PrjDir <- file.path(dq_folder, "DQProduct")
-DataDir <- file.path(PrjDir, "data")
-SubnatFuncDir <- file.path(UserDir, "Health-HIV Data & Analytics - Subnational data analysis/utils/R")
-DummyUtils <- file.path(UserDir, "Health-HIV Data & Analytics - 2025 rev/unicef-products/dummy/utils")
-UtilsDir <- file.path(wd, "utils")
-OutputDir <- file.path(PrjDir, "outputs")
-RevDir <- str_glue(file.path(UserDir, "Health-HIV Data & Analytics - {rev_yr} rev"))
-wiisefolder <- str_glue(file.path(RevDir, "unicef-products/{type}/wiise-outputs"))
-DummyDataDir <- str_glue(file.path(RevDir, "wuenic_master/dummy"))
-
 # Load libraries
 library(tidyverse)
 library(readxl)
@@ -87,6 +45,51 @@ library(lubridate)
 library(flextable)
 library(kableExtra)
 library(webshot2)
+
+# if (USERNAME == "laure"){
+#   wd <- "C:/Users/laure/OneDrive - UNICEF"
+# }
+
+
+# if (USERNAME == "ykawa"){
+#   prg_folder <- "C:/Users/ykawa/UNICEF/Health-HIV Data & Analytics - Documents/Immunization/Projects and products/Subnational data analysis" 
+#   wd         <- "C:/Users/ykawa/UNICEF/Health-HIV Data & Analytics - Documents"  
+#   ahead      <- "C:/Users/ykawa/UNICEF/Health-HIV Data & Analytics - Documents/UNICEF Ahead Database/01 Administrative Data"
+#   git        <- "C:/Users/ykawa/GitHub/AHEAD"
+# }
+# 
+# if (USERNAME == "okiya"){
+#   prg_folder <- "C:/Users/okiya/UNICEF/Health-HIV Data & Analytics - Subnational data analysis" 
+#   #wd         <- ""  
+#   #ahead      <- ""
+#   #git        <- ""
+# }
+# 
+# if (USER == "UNICEF") { # grace
+#   prg_folder <- "/Users/UNICEF/Library/CloudStorage/OneDrive-SharedLibraries-UNICEF/Health-HIV Data & Analytics - Subnational data analysis" 
+#   EthDir <- "/Users/UNICEF/Documents/unicef_local/ethiopia_cleaning"
+# }
+
+# # Pre-create directory for AzureAuth
+# dir.create("~/Library/Application Support/AzureR", recursive = TRUE, showWarnings = FALSE)
+# options(azure_auth_create_dir = TRUE)
+
+# file paths
+UserDir <- file.path("/Users", USERNAME, "Library/CloudStorage/OneDrive-SharedLibraries-UNICEF")
+wd <- file.path("/Users", USERNAME, "Library/CloudStorage/OneDrive-SharedLibraries-UNICEF/Health-HIV Data & Analytics - For-Grace")
+dq_folder <- file.path(UserDir, "Health-HIV Data & Analytics - 2025 rev/unicef-products/dummy/data-quality")
+PrjDir <- file.path(dq_folder, "DQProduct")
+DataDir <- file.path(PrjDir, "data")
+SubnatFuncDir <- file.path(UserDir, "Health-HIV Data & Analytics - Subnational data analysis/utils/R")
+DummyUtils <- file.path(UserDir, "Health-HIV Data & Analytics - 2025 rev/unicef-products/dummy/utils")
+UtilsDir <- file.path(wd, "utils")
+OutputDir <- file.path(PrjDir, "outputs")
+RevDir <- str_glue(file.path(UserDir, "Health-HIV Data & Analytics - {rev_yr} rev"))
+wiisefolder <- str_glue(file.path(RevDir, "unicef-products/{type}/wiise-outputs"))
+DummyDataDir <- str_glue(file.path(RevDir, "wuenic_master/dummy"))
+HPVDir <- file.path(UserDir, "Health-HIV Data & Analytics - HPV estimates")
+
+
 
 font_add_google("Roboto", "roboto")
 showtext_auto()
