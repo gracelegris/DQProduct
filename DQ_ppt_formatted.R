@@ -425,7 +425,7 @@ func_slide_bb("Data Availability")
 func_slide_v(dml_plt_missing_heatmap)
 func_slide_v_txt(paste0(
   "Heatmap showing whether admin data are present (green), missing (red), or not applicable ",
-  "because the vaccine had not yet been introduced (grey), by vaccine and year."))
+  "because the vaccine had not yet been introduced (white), by vaccine and year."))
 
 # ── SAVE ─────────────────────────────────────────────────────────────────────
 folder_path <- str_glue("{dqfolder}/outputs")
