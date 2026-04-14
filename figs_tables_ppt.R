@@ -287,8 +287,7 @@ source(file.path(PrjDir, "R/all_vax_heatmap.R"))
 ## ---------------------------------------------------------------------------------------------------------------------
 
 # data prep
-n_years <- 5
-recent_years <- sort(unique(wuenic_master$Year), decreasing = TRUE)[1:n_years]
+recent_years <- sort(unique(wuenic_master$Year), decreasing = TRUE)[1:n_years_comparison_plot]
 
 min_yr <- min(recent_years)
 max_yr <- max(recent_years)
@@ -458,7 +457,7 @@ plt_coverage_flags <- ggplot(combined_flag_data, aes(x = Year, y = Admin)) +
   theme_minimal() +
   labs(
     title = paste0("Admin Coverage Flags by Vaccine and Year, ", CountryName, ", ", min_yr_plots, "–", rev_yr),
-    subtitle = paste0("Orange = coverage > 100%  |  Red = ± ", pct_threshold*100, "pp change"),
+    subtitle = paste0("Orange = coverage > 100%  |  Red = ± ", pct_threshold*100, "pp change from previous year"),
     x = "Year", y = "Admin Coverage (%)",
     color = "Flag Type"
   ) +
@@ -492,7 +491,7 @@ plt_selected_coverage_flags <- ggplot(selected_flag_data, aes(x = Year, y = Admi
   theme_minimal() +
   labs(
     title = paste0("DTP1, DTP3, and MCV1 Admin Coverage Flags by Year, ", CountryName, ", ", min_yr_plots, "–", rev_yr),
-    subtitle = paste0("Orange = coverage > 100%  |  Red = ± ", pct_threshold*100, "pp change"),
+    subtitle = paste0("Orange = coverage > 100%  |  Red = ± ", pct_threshold*100, "pp change from previous year"),
     x = "Year", y = "Admin Coverage (%)",
     color = "Flag Type"
   ) +
@@ -835,8 +834,7 @@ denom_types_data <- wuenic_master %>%
     pct_change_denom = (ChildrenInTarget - prev_target) / prev_target,
     flag_denom_change = abs(pct_change_denom) > pct_threshold
   ) %>%
-  ungroup() %>%
-  filter(!is.na(pct_change_denom)) # Remove first year as it has no 'previous'
+  ungroup()
 
 # Calculate scaling for the secondary axis (raw counts)
 y_limit_dt <- max(abs(denom_types_data$pct_change_denom), na.rm = TRUE)
@@ -1216,12 +1214,16 @@ heatmap_data_wuenic <- heatmap_data_wuenic %>%
          In_Schedule = case_when(Year == rev_yr ~ "Yes", TRUE ~ In_Schedule),
          status = factor(status, levels = c("Present", "Missing", "Not Introduced")))
 
+# order for heatmap
+heatmap_data_wuenic$Vaccine <- factor(heatmap_data_wuenic$Vaccine, levels = c("BCG", "HepBB", "DTP1", "DTP3", "Hib3", "HepB3", "PCVC", "RotaC", 
+                                                                  "POL3", "IPV1", "IPVC", "MCV1", "RCV1", "MCV2", "YFV", "MengA","HPVc"))
+
 # heatmap
 plt_missing_heatmap <- ggplot(heatmap_data_wuenic, aes(x = factor(Year), y = fct_rev(Vaccine), fill = status)) +
   geom_tile(color = "white", linewidth = 0.2) +
   scale_fill_manual(
-    values = c("Missing" = "#E2231A", "Present" = "#00833D", "Not Introduced" = "#F2F2F2"),
-    na.value = "#F2F2F2" # for years not in the intro table
+    values = c("Missing" = "#E2231A", "Present" = "#00833D", "Not Introduced" = "white"),
+    na.value = "white" # for years not in the intro table
   ) +
   theme_minimal() +
   labs(
