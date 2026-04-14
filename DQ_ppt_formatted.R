@@ -241,7 +241,7 @@ doc <- ph_with(
 doc <- ph_with(
   x = doc,
   block_list(fpar(
-    ftext(paste("Administrative Data Quality Review Report, ", rev_yr),
+    ftext(paste("Administrative Data Quality Review Report,", rev_yr),
           prop = fp_text(font.size = 22, color = "white")),
     fp_p = fp_par(text.align = "center"))),
   location = ph_location("body", left = 3.34, top = 3.92, width = 7, height = 1.22))
