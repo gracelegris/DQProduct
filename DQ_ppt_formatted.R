@@ -12,6 +12,7 @@ rev_yr        <- 2025
 hpv_rev_yr    <- 2024
 wpp_rev_yr    <- 2024
 min_yr_plots  <- 2000
+n_years_comparison_plot <- 5 # years to display in the wuenic vs. official vs. admin coverage heatmap
 type          <- "dummy"
 language <- "en"
 
@@ -46,13 +47,12 @@ wiisefolder <- str_glue(RevDir, "/unicef-products/{type}/wiise-outputs")
 dqfolder   <- str_glue(RevDir, "/unicef-products/{type}/data-quality/DQProduct")
 
 ## ── SOURCE SHARED UTILITY FUNCTIONS ────────────────────────────────────────
-# Reuse the same helpers your team built — no need to duplicate them.
-source(file.path(PrjDir, "R/label_vals.R"))
-source(file.path(PrjDir, "R/funcs.R"))
+source(file.path(dqfolder, "R/label_vals.R"))
+source(file.path(dqfolder, "R/funcs.R"))
 source(str_glue("{utils}/R/slide_general_funcs.R"))    # func_slide_v, func_slide_bb, etc.
 source(str_glue("{utils}/R/slide_production_funcs.R")) # func_slide_v_txt, func_slide_v_tlm, etc.
 
-# Subnational data quality helpers (from your DQ script)
+# Subnational data quality helpers
 source(paste0(SubnatFuncDir, "/user_functions_outliers.R"))
 source(paste0(SubnatFuncDir, "/data_quality_funcs.R"))
 
@@ -66,8 +66,6 @@ source_colors <- c("WHO/UNICEF"                    = "#0083CF",
                    "Survey"                         = "#FFC20E")
 
 ## ── DATA LOADING ─────────────────────────────────────────────────────────────
-# (Same data loading block as your DQ figures script — run it once here so
-#  all plot scripts below can reference the objects.)
 
 # Master WUENIC dataset
 wuenic_master <- read.csv(file.path(DummyDataDir, "wuenic-master_2025rev.csv")) %>%
@@ -181,8 +179,6 @@ tbl_intro_r <- wiise_intro %>%
 no_data <- function(df) nrow(df) == 0
 
 ## ── GENERATE ALL DATA QUALITY PLOTS ─────────────────────────────────────────
-# Source each plot section from your DQ figures script.
-# These scripts should assign consistently-named objects (plt_*, tbl_*).
 
 source(file.path(PrjDir, "R/tbl_schedule.R"))          # → tbl_schedule, tbl_schedule_r
 
@@ -226,11 +222,10 @@ for (name in names(ggplot_objects)) {
 }
 
 ## ── BUILD POWERPOINT ─────────────────────────────────────────────────────────
-# Load the shared blank-slide template — same file your team uses.
 doc <- read_pptx(str_glue("{utils}/region-specific-blank-slides.pptx"))
 
 slide_title <- CountryName
-rect        <- rectGrob(gp = gpar(fill = "black", col = NA))  # top-line message underline
+rect <- rectGrob(gp = gpar(fill = "black", col = NA))  # top-line message underline
 
 # ── COVER ────────────────────────────────────────────────────────────────────
 doc <- add_slide(doc, layout = "cover_country", master = "Office Theme")
@@ -246,29 +241,33 @@ doc <- ph_with(
 doc <- ph_with(
   x = doc,
   block_list(fpar(
-    ftext("Administrative Data Quality Review Report",
+    ftext(paste("Administrative Data Quality Review Report, ", rev_yr),
           prop = fp_text(font.size = 22, color = "white")),
     fp_p = fp_par(text.align = "center"))),
-  location = ph_location("body", left = 3.34, top = 3.92, width = 6.68, height = 1.22))
+  location = ph_location("body", left = 3.34, top = 3.92, width = 7, height = 1.22))
 
-doc <- remove_slide(doc, index = 1)   # remove the blank first slide the template ships with
+doc <- remove_slide(doc, index = 1)   # remove the blank first slide in the template
 
 # ── INTRO SLIDE ───────────────────────────────────────────────────────────────
 doc <- add_slide(doc, layout = "intro_slide", master = "Office Theme")
 
 # Country context paragraph
-doc <- ph_with(
-  x = doc,
-  block_list(fpar(
-    ftext(intro_paragraph,
-          prop = fp_text(font.size = 14, color = "white")),
-    fp_p = fp_par(text.align = "left"))),
-  location = ph_location("body", left = 0.57, top = 1.5, width = 12.2, height = 4, bg = "#203864"))
+# doc <- ph_with(
+#   x = doc,
+#   block_list(fpar(
+#     ftext(intro_paragraph,
+#           prop = fp_text(font.size = 14, color = "white")),
+#     fp_p = fp_par(text.align = "left"))),
+#   location = ph_location("body", left = 0.57, top = 1.5, width = 12.2, height = 4, bg = "#203864"))
 
 # ── SECTION DIVIDER: SCHEDULE & STOCKOUTS ────────────────────────────────────
 func_slide_bb("Schedule & Stockouts")
 
 # Vaccine schedule table
+schedule_year <- wiise_schedule %>% 
+  filter(iso3c == x) %>% 
+  pull(year) %>% 
+  max(na.rm = TRUE)
 if (nrow(tbl_schedule_r) > 0 && ncol(tbl_schedule_r) > 0) {
   doc <- add_slide(doc, layout = "data_1", master = "Office Theme")
   doc <- ph_with(doc,
@@ -277,14 +276,14 @@ if (nrow(tbl_schedule_r) > 0 && ncol(tbl_schedule_r) > 0) {
                  location = ph_location(left = 0.6, top = 0.6, width = 8, height = 1))
   doc <- ph_with(x = doc, value = tbl_schedule,
                  location = ph_location(left = 0.6, top = 1.5, width = total_width_sched, height = 5))
-  func_slide_v_txt("Vaccine schedule as reported to WIISE.")
+  func_slide_v_txt(paste0("Vaccine schedule as reported to WIISE. Latest update: ", schedule_year, "."))
 }
 
 # Vaccine introductions table
 if (!no_data(tbl_intro_r) && nrow(tbl_intro_r) > 0 && ncol(tbl_intro_r) > 0) {
   doc <- add_slide(doc, layout = "data_1", master = "Office Theme")
   doc <- ph_with(doc,
-                 value = fpar(ftext("Year of Vaccine Introduction",
+                 value = fpar(ftext("Vaccine Introductions",
                                     prop = fp_text(font.size = 28, color = "black", font.family = "Calibri"))),
                  location = ph_location(left = 0.6, top = 0.6, width = 8, height = 1))
   doc <- ph_with(x = doc, value = tbl_intro,
@@ -308,14 +307,17 @@ if (nrow(tbl_stock_r) > 0 && ncol(tbl_stock_r) > 0) {
 func_slide_bb("Coverage Overview")
 
 # WUENIC coverage heatmap
+min_yr <- min(df$year)
+max_yr <- max(df$year)
 func_slide_v(dml_plt_all_vax_heatmap)
-func_slide_v_txt("WUENIC coverage estimates across all vaccines, 2000 to present.")
+func_slide_v_txt(paste0("WHO/UNICEF coverage estimates across all vaccines, ", min_yr, "–", max_yr, ".",
+                        " Blank cells indicate years prior to vaccine introduction."))
 
 # Summary table: coverage by source
 func_slide_v(dml_plt_summary_table)
 func_slide_v_txt(paste0(
   "Coverage by vaccine and data source (WHO/UNICEF, Admin, Official) for the most recent ",
-  "5 years. Colour scale: red (<60%) to green (≥90%). Missing cells shown in grey."))
+  n_years_comparison_plot, " years. Colour scale: red (<60%) to green (≥90%). Missing cells shown in grey. Blank cells indicate years prior to vaccine introduction."))
 
 # ── SECTION DIVIDER: COVERAGE TRENDS BY SOURCE ───────────────────────────────
 func_slide_bb("Coverage Trends by Source")
@@ -338,7 +340,7 @@ func_slide_bb("Admin Coverage Flags")
 func_slide_v(dml_plt_coverage_flags)
 func_slide_v_txt(paste0(
   "Admin coverage flagged where values exceed 100% (orange) or change by more than ±",
-  pct_threshold * 100, " percentage points year-on-year (red), ", min_yr_plots, "–", rev_yr, "."))
+  pct_threshold * 100, " percentage points from the previous year (red), ", min_yr_plots, "–", rev_yr, "."))
 
 # DTP1, DTP3, MCV1 — flag chart
 func_slide_v(dml_plt_selected_coverage_flags)
