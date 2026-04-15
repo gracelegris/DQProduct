@@ -38,21 +38,17 @@ library(rvg)
 options(scipen = 999)
 
 ## ── PATHS ───────────────────────────────────────────────────────────────────
-# Mirror the same folder conventions your team uses so paths to the shared
-# template and utility scripts resolve identically.
 RevDir <- file.path("/Users/UNICEF/Library/CloudStorage/OneDrive-SharedLibraries-UNICEF/Health-HIV Data & Analytics - 2025 rev")
 utils      <- str_glue(RevDir, "/unicef-products/{type}/utils")
 wrkfolder  <- str_glue(RevDir, "/unicef-products/{type}/country-specific-charts")
 wiisefolder <- str_glue(RevDir, "/unicef-products/{type}/wiise-outputs")
 dqfolder   <- str_glue(RevDir, "/unicef-products/{type}/data-quality/DQProduct")
 
-## ── SOURCE SHARED UTILITY FUNCTIONS ────────────────────────────────────────
+# source functions
 source(file.path(dqfolder, "R/label_vals.R"))
 source(file.path(dqfolder, "R/funcs.R"))
 source(str_glue("{utils}/R/slide_general_funcs.R"))    # func_slide_v, func_slide_bb, etc.
 source(str_glue("{utils}/R/slide_production_funcs.R")) # func_slide_v_txt, func_slide_v_tlm, etc.
-
-# Subnational data quality helpers
 source(paste0(SubnatFuncDir, "/user_functions_outliers.R"))
 source(paste0(SubnatFuncDir, "/data_quality_funcs.R"))
 
@@ -60,14 +56,11 @@ source(paste0(SubnatFuncDir, "/data_quality_funcs.R"))
 unicef_colors <- c("#0058AB","#1CABE2","#00833D","#80BD41","#6A1E74",
                    "#961A49","#E2231A","#F26A21","#FFC20E","#FFF09C","#002759")
 
-source_colors <- c("WHO/UNICEF"                    = "#0083CF",
-                   "Admin"                          = "#6A1E74",
-                   "Official (Government Estimate)" = "#80BD41",
-                   "Survey"                         = "#FFC20E")
+source_colors <- c("WHO/UNICEF" = "#0083CF", "Admin" = "#6A1E74", "Official (Government Estimate)" = "#80BD41", "Survey" = "#FFC20E")
 
 ## ── DATA LOADING ─────────────────────────────────────────────────────────────
 
-# Master WUENIC dataset
+# master WUENIC dataset
 wuenic_master <- read.csv(file.path(DummyDataDir, "wuenic-master_2025rev.csv")) %>%
   mutate(ISOCountryCode = toupper(ISOCountryCode)) %>%
   filter(ISOCountryCode == Current_ISO3,
@@ -91,16 +84,16 @@ wuenic_master$Vaccine <- factor(
   levels = c("BCG","HepBB","DTP1","DTP3","Hib3","HepB3","PCVC","RotaC",
              "POL3","IPV1","IPVC","MCV1","RCV1","MCV2","YFV","MengA","HPVc"))
 
-# Regional info
+# regional info
 regional_info <- read_csv(file.path(DummyUtils, "regional-groups_2026-release.csv")) %>%
   filter(iso3c == Current_ISO3)
 
 # WIISE schedule and introductions
-wiise_schedule  <- read_excel(str_glue("{wiisefolder}/output/wiise-schedule-dta_{rev_yr}rev.xlsx"))
-wiise_intro     <- read_excel(str_glue("{wiisefolder}/output/wiise-intro-dta_{rev_yr}rev.xlsx"))
+wiise_schedule <- read_excel(str_glue("{wiisefolder}/output/wiise-schedule-dta_{rev_yr}rev.xlsx"))
+wiise_intro <- read_excel(str_glue("{wiisefolder}/output/wiise-intro-dta_{rev_yr}rev.xlsx"))
 wiise_stockouts <- read_excel(str_glue("{wiisefolder}/output/wiise-stock-dta_{rev_yr}rev.xlsx"))
 
-# Latest WUENIC revision (for heatmap / stockout helpers)
+# latest WUENIC revision (for heatmap / stockout helpers)
 wueniclatestrev <- read_rds(here(str_glue(
   file.path(RevDir, "/unicef-products/{type}/01_wuenic_dataset-prep/clean_wuenic_MASTER_{rev_yr}rev.rds")
 ))) %>%
@@ -118,26 +111,26 @@ wueniclatestrev <- read_rds(here(str_glue(
 wueniclatestrev <- clean_reg_names(wueniclatestrev)
 wvax <- unique(wueniclatestrev$vaccine)
 
-# Stockout data — clean to match WUENIC vaccine names
+# stockout data — clean to match WUENIC vaccine names
 wuenic_stockouts_clean <- wiise_stockouts %>%
   rename(code = vaccine) %>%
   mutate(vaccine = tolower(code),
          vaccine = case_when(
-           vaccine == "opv"       ~ "pol3",
-           vaccine == "pcv"       ~ "pcv3",
-           vaccine == "ipv"       ~ "ipv1;ipv2",
-           vaccine == "hepb"      ~ "hepbb;hepb3",
-           vaccine == "hib"       ~ "hib3",
+           vaccine == "opv" ~ "pol3",
+           vaccine == "pcv" ~ "pcv3",
+           vaccine == "ipv" ~ "ipv1;ipv2",
+           vaccine == "hepb" ~ "hepbb;hepb3",
+           vaccine == "hib" ~ "hib3",
            vaccine == "rotavirus" ~ "rotac",
            vaccine %in% c("measles-rubella (mr)","measles-mumps-rubella (mmr)") ~ "mcv1;mcv2;rcv1",
-           vaccine == "dtp-hib-hepb-ipv"     ~ "dtp1;dtp3;hib3;hepb3",
+           vaccine == "dtp-hib-hepb-ipv" ~ "dtp1;dtp3;hib3;hepb3",
            vaccine == "dtp-containing vaccine"~ "dtp1;dtp3;hib3;hepb3",
-           vaccine == "dtp-hepb-ipv"         ~ "dtp1;dtp3;ipv1;hepb3;ipv2",
-           vaccine == "dtp-hib-ipv"          ~ "dtp1;dtp3;hib3;ipv1;ipv2",
-           vaccine == "dtp-hib-hepb"         ~ "dtp1;dtp3;hib3;hepb3",
-           vaccine == "mcv"  ~ "mcv1;mcv2",
+           vaccine == "dtp-hepb-ipv" ~ "dtp1;dtp3;ipv1;hepb3;ipv2",
+           vaccine == "dtp-hib-ipv" ~ "dtp1;dtp3;hib3;ipv1;ipv2",
+           vaccine == "dtp-hib-hepb" ~ "dtp1;dtp3;hib3;hepb3",
+           vaccine == "mcv" ~ "mcv1;mcv2",
            vaccine == "mena" ~ "menga",
-           vaccine == "rcv"  ~ "rcv1",
+           vaccine == "rcv" ~ "rcv1",
            TRUE ~ vaccine)) %>%
   mutate(v = strsplit(vaccine, ";")) %>%
   unnest_wider(v, names_sep = "_") %>%
@@ -148,7 +141,7 @@ wuenic_stockouts_clean <- wiise_stockouts %>%
   mutate(any_stockout = 1) %>%
   distinct()
 
-# Add stockout markers to wuenic_master
+# add stockout markers to wuenic_master
 wuenic_stockouts_master <- wuenic_stockouts_clean %>%
   mutate(iso3c = toupper(iso3c),
          vaccine = case_when(
@@ -162,7 +155,7 @@ wuenic_master <- wuenic_master %>%
             by = c("ISOCountryCode" = "iso3c", "Year" = "year", "Vaccine" = "vaccine")) %>%
   mutate(any_stockout = if_else(is.na(any_stockout), 0, any_stockout))
 
-# Vaccine introduction table (for PPT)
+# vaccine introduction table
 tbl_intro_r <- wiise_intro %>%
   mutate(iso3c = tolower(iso3c)) %>%
   filter(iso3c == x) %>%
@@ -180,20 +173,20 @@ no_data <- function(df) nrow(df) == 0
 
 ## ── GENERATE ALL DATA QUALITY PLOTS ─────────────────────────────────────────
 
-source(file.path(PrjDir, "R/tbl_schedule.R"))          # → tbl_schedule, tbl_schedule_r
+source(file.path(PrjDir, "R/tbl_schedule.R"))
 
 if (!no_data(tbl_intro_r)) {
-  source(file.path(PrjDir, "R/tbl_intro.R"))            # → tbl_intro
+  source(file.path(PrjDir, "R/tbl_intro.R"))
 }
 
-source(file.path(PrjDir, "R/tbl_stock.R"))              # → tbl_stock, tbl_stock_r
+source(file.path(PrjDir, "R/tbl_stock.R"))
 
-source(file.path(PrjDir, "R/all_vax_heatmap.R"))        # → plt_all_vax_heatmap  (WUENIC coverage heatmap)
+source(file.path(PrjDir, "R/all_vax_heatmap.R"))
 
-# ── DQ-specific plots (from your figures script) ─────────────────────────────
+# ── dq plots from figs_tables_ppt.R script ─────────────────────────────
 source(file.path(PrjDir, "figs_tables_ppt.R"))
 
-# Intro paragraph (plain text — no translation needed)
+# intro paragraph
 intro_paragraph <- paste0(
   regional_info$country, " is located in ", str_to_title(regional_info$un_region),
   ", within the UNICEF ", toupper(regional_info$region_unicef_ops), " region.",
@@ -208,8 +201,6 @@ intro_paragraph <- paste0(
 )
 
 ## ── CONVERT PLOTS TO EDITABLE DML ───────────────────────────────────────────
-# Collect every plt_* object and wrap it in dml() for PowerPoint embedding.
-# Arabic PNG fallback from the original script is not needed here (English only).
 plot_names     <- ls(pattern = "^plt_")
 ggplot_objects <- mget(plot_names, envir = .GlobalEnv)
 
@@ -225,7 +216,7 @@ for (name in names(ggplot_objects)) {
 doc <- read_pptx(str_glue("{utils}/region-specific-blank-slides.pptx"))
 
 slide_title <- CountryName
-rect <- rectGrob(gp = gpar(fill = "black", col = NA))  # top-line message underline
+rect <- rectGrob(gp = gpar(fill = "black", col = NA)) # top-line message underline
 
 # ── COVER ────────────────────────────────────────────────────────────────────
 doc <- add_slide(doc, layout = "cover_country", master = "Office Theme")
@@ -237,7 +228,7 @@ doc <- ph_with(
     fp_p = fp_par(text.align = "center"))),
   location = ph_location("body", left = 1.9, top = 2.86, width = 9.5, height = 2))
 
-# Subtitle: report type
+# subtitle: report type
 doc <- ph_with(
   x = doc,
   block_list(fpar(
@@ -246,7 +237,7 @@ doc <- ph_with(
     fp_p = fp_par(text.align = "center"))),
   location = ph_location("body", left = 3.34, top = 3.92, width = 7, height = 1.22))
 
-doc <- remove_slide(doc, index = 1)   # remove the blank first slide in the template
+doc <- remove_slide(doc, index = 1) # remove the blank first slide in the template
 
 # ── INTRO SLIDE ───────────────────────────────────────────────────────────────
 doc <- add_slide(doc, layout = "intro_slide", master = "Office Theme")
@@ -263,7 +254,7 @@ doc <- add_slide(doc, layout = "intro_slide", master = "Office Theme")
 # ── SECTION DIVIDER: SCHEDULE & STOCKOUTS ────────────────────────────────────
 func_slide_bb("Schedule & Stockouts")
 
-# Vaccine schedule table
+# vaccine schedule table
 schedule_year <- wiise_schedule %>% 
   filter(iso3c == x) %>% 
   pull(year) %>% 
@@ -279,7 +270,7 @@ if (nrow(tbl_schedule_r) > 0 && ncol(tbl_schedule_r) > 0) {
   func_slide_v_txt(paste0("Vaccine schedule as reported to WIISE. Latest update: ", schedule_year, "."))
 }
 
-# Vaccine introductions table
+# vaccine introductions table
 if (!no_data(tbl_intro_r) && nrow(tbl_intro_r) > 0 && ncol(tbl_intro_r) > 0) {
   doc <- add_slide(doc, layout = "data_1", master = "Office Theme")
   doc <- ph_with(doc,
@@ -291,7 +282,7 @@ if (!no_data(tbl_intro_r) && nrow(tbl_intro_r) > 0 && ncol(tbl_intro_r) > 0) {
   func_slide_v_txt("Year in which each vaccine was introduced nationally, partially, for risk groups, or risk areas.")
 }
 
-# Stockout table
+# stockout table
 if (nrow(tbl_stock_r) > 0 && ncol(tbl_stock_r) > 0) {
   doc <- add_slide(doc, layout = "data_no_logos", master = "Office Theme")
   doc <- ph_with(doc,
@@ -313,7 +304,7 @@ func_slide_v(dml_plt_all_vax_heatmap)
 func_slide_v_txt(paste0("WHO/UNICEF coverage estimates across all vaccines, ", min_yr, "–", max_yr, ".",
                         " Blank cells indicate years prior to vaccine introduction."))
 
-# Summary table: coverage by source
+# summary table: coverage by source
 func_slide_v(dml_plt_summary_table)
 func_slide_v_txt(paste0(
   "Coverage by vaccine and data source (WHO/UNICEF, Admin, Official) for the most recent ",
@@ -322,7 +313,7 @@ func_slide_v_txt(paste0(
 # ── SECTION DIVIDER: COVERAGE TRENDS BY SOURCE ───────────────────────────────
 func_slide_bb("Coverage Trends by Source")
 
-# All vaccines — line chart
+# all vaccines — line chart
 func_slide_v(dml_plt_all_vax_line)
 func_slide_v_txt(paste0(
   "Time-series of WHO/UNICEF estimates, administrative coverage, official government estimates, ",
@@ -336,7 +327,7 @@ func_slide_v_txt(paste0(
 # ── SECTION DIVIDER: ADMIN DATA FLAGS ────────────────────────────────────────
 func_slide_bb("Admin Coverage Flags")
 
-# All vaccines — flag chart
+# all vaccines — flag chart
 func_slide_v(dml_plt_coverage_flags)
 func_slide_v_txt(paste0(
   "Admin coverage flagged where values exceed 100% (orange) or change by more than ±",
@@ -350,13 +341,13 @@ func_slide_v_txt(paste0(
 # ── SECTION DIVIDER: ADMIN VS ESTIMATES ──────────────────────────────────────
 func_slide_bb("Admin vs. Estimates")
 
-# Admin vs WHO/UNICEF
+# admin vs WHO/UNICEF
 func_slide_v(dml_plt_admin_vs_wuenic)
 func_slide_v_txt(paste0(
   "Comparison of administrative coverage and WHO/UNICEF estimates by vaccine. ",
   "Red points indicate gaps exceeding ±", pct_threshold * 100, " percentage points."))
 
-# Admin vs Official Government Estimate
+# admin vs official
 func_slide_v(dml_plt_admin_vs_official)
 func_slide_v_txt(paste0(
   "Comparison of administrative coverage and official government estimates. ",
@@ -365,7 +356,7 @@ func_slide_v_txt(paste0(
 # ── SECTION DIVIDER: NUMERATOR CHECKS ────────────────────────────────────────
 func_slide_bb("Numerator Checks")
 
-# Year-on-year % change in vaccinated children
+# year-to-year % change in vaccinated children
 func_slide_v(dml_plt_perc_change_line)
 func_slide_v_txt(paste0(
   "Year-to-year percentage change in the number of children vaccinated (numerator) by vaccine. ",
@@ -376,14 +367,14 @@ func_slide_v_txt(paste0(
 # ── SECTION DIVIDER: DENOMINATOR CHECKS ──────────────────────────────────────
 func_slide_bb("Denominator Checks")
 
-# Year-on-year % change in target population (all vaccines)
+# year-to-year % change in target population (all vaccines)
 func_slide_v(dml_plt_denom_change)
 func_slide_v_txt(paste0(
   "Year-to-year percentage change in the number of children in the target population (denominator) ",
   "by vaccine. Red points flag changes exceeding ±", pct_threshold * 100,
   "%. Green line shows raw counts on the secondary axis."))
 
-# Live births (BCG) vs surviving infants (DTP1)
+# live births (BCG) vs surviving infants (DTP1)
 func_slide_v(dml_plt_births_vs_si)
 func_slide_v_txt(paste0(
   "Comparison of live births (BCG denominator) and surviving infants (DTP1 denominator) ",
@@ -398,7 +389,7 @@ func_slide_v_txt(paste0(
 # ── SECTION DIVIDER: DROPOUT & CO-ADMINISTRATION ────────────────────────────
 func_slide_bb("Dropout & Co-administration")
 
-# Dropout rates
+# dropout rates
 func_slide_vnologo(dml_plt_dropout_with_rate)
 func_slide_v_txt(paste0(
   "Admin coverage for key vaccine pairs (DTP1→DTP3, DTP1→MCV1) with dropout rate shown as bars. ",
@@ -421,7 +412,7 @@ func_slide_v_txt("Admin coverage of all vaccines administered at 14 weeks per th
 # ── SECTION DIVIDER: DATA AVAILABILITY ───────────────────────────────────────
 func_slide_bb("Data Availability")
 
-# Missing data heatmap
+# missing data heatmap
 func_slide_v(dml_plt_missing_heatmap)
 func_slide_v_txt(paste0(
   "Heatmap showing whether admin data are present (green), missing (red), or not applicable ",
@@ -434,5 +425,3 @@ dir.create(folder_path, recursive = TRUE, showWarnings = FALSE)
 print(doc, target = file.path(folder_path, paste0(x, "_en.pptx")))
 
 message("✓ Data quality report saved to: ", folder_path)
-
-## END -------------------------------------------------------------------------
