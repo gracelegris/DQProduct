@@ -239,8 +239,14 @@ doc <- ph_with(
 
 doc <- remove_slide(doc, index = 1) # remove the blank first slide in the template
 
-# ── INTRO SLIDE ───────────────────────────────────────────────────────────────
+# ── INTRO SLIDE (wuenic info) ─────────────────────────────────────────────────
 doc <- add_slide(doc, layout = "intro_slide", master = "Office Theme")
+
+# ── EJRF INFO-- ───────────────────────────────────────────────────────────────
+func_slide_bb("eJRF info here")
+
+# ── DEFINITIONS ───────────────────────────────────────────────────────────────
+doc <- add_slide(doc, layout = "definitions", master = "Office Theme")
 
 # Country context paragraph
 # doc <- ph_with(
@@ -327,6 +333,9 @@ func_slide_v_txt(paste0(
 # ── SECTION DIVIDER: ADMIN DATA FLAGS ────────────────────────────────────────
 func_slide_bb("Admin Coverage Flags")
 
+# ── THRESHOLD EXPLANATION ─────────────────────────────────────────────────────
+func_slide_bb("this is why we use the 10% threshold..")
+
 # all vaccines — flag chart
 func_slide_v(dml_plt_coverage_flags)
 func_slide_v_txt(paste0(
@@ -341,11 +350,17 @@ func_slide_v_txt(paste0(
 # ── SECTION DIVIDER: ADMIN VS ESTIMATES ──────────────────────────────────────
 func_slide_bb("Admin vs. Estimates")
 
-# admin vs WHO/UNICEF
+# admin vs WHO/UNICEF (first pct change threshold)
 func_slide_v(dml_plt_admin_vs_wuenic)
 func_slide_v_txt(paste0(
   "Comparison of administrative coverage and WHO/UNICEF estimates by vaccine. ",
   "Red points indicate gaps exceeding ±", pct_threshold * 100, " percentage points."))
+
+# admin vs WHO/UNICEF (second pct change threshold)
+func_slide_v(dml_plt_admin_vs_wuenic2)
+func_slide_v_txt(paste0(
+  "Comparison of administrative coverage and WHO/UNICEF estimates by vaccine. ",
+  "Red points indicate gaps exceeding ±", second_pct_threshold * 100, " percentage points."))
 
 # admin vs official
 func_slide_v(dml_plt_admin_vs_official)
