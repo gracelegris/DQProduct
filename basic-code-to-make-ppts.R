@@ -1,5 +1,4 @@
 
-source("user_profiles.R")
 source("figs_tables_ppt.R")
 source(file.path(DummyUtils, "R/slide_production_funcs.R"))
 

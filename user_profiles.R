@@ -44,7 +44,8 @@ library(showtext)
 library(lubridate)
 library(flextable)
 library(kableExtra)
-library(webshot2)
+library(gridGraphics)
+library(ggplotify)
 
 # if (USERNAME == "laure"){
 #   wd <- "C:/Users/laure/OneDrive - UNICEF"
@@ -91,8 +92,8 @@ HPVDir <- file.path(UserDir, "Health-HIV Data & Analytics - HPV estimates")
 
 
 
-font_add_google("Roboto", "roboto")
-showtext_auto()
+#font_add_google("Roboto", "roboto")
+#showtext_auto()
 
 # highlight styles for powerpoint
 highlightStyle1 <- openxlsx::createStyle(fgFill = "#FFFFCC") # Use bgFill instead of bgColor

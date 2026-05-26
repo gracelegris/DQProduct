@@ -3,83 +3,13 @@
 # Author: Grace Legris, glegris@unicef.org
 # ==========================================================================================================================================
 
-rm(list = ls())
-
-## ── PARAMETERS ───────────────────────────────────────────────────────────────
-CountryName   <- "Uganda"
-Current_ISO3  <- "UGA"
-x             <- tolower(Current_ISO3)
-pct_threshold <- 0.10
-second_pct_threshold <- 0.30
-rev_yr        <- 2025
-hpv_rev_yr    <- 2024
-wpp_rev_yr    <- 2024
-min_yr_plots  <- 2000
-n_years_comparison_plot <- 5 # years to display in the wuenic vs. official vs. admin coverage heatmap
-type          <- "dummy"
-language <- "en"
-
-## ─────────────────────────────────────────────────────────────────────────────
-source("user_profiles.R")
-#source("01_setup.R") 
-source(file.path(PrjDir, "R/label_vals.R"))
-source(file.path(PrjDir, "R/funcs.R"))
-
-# data cleaning functions from subnational folder
-source(paste0(SubnatFuncDir, "/user_functions_outliers.R"))
-source(paste0(SubnatFuncDir, "/data_quality_funcs.R"))
-
-## ── LIBRARIES ────────────────────────────────────────────────────────────────
-library(tidyverse)
-library(readxl)
-library(openxlsx)
-library(janitor)
-library(here)
-library(ggrepel)
-library(ggpattern)
-library(patchwork)
-library(ggbump)
-library(gghighlight)
-library(ggpubr)
-library(gridGraphics)
-library(ggplotify)
-library(purrr)
-library(flextable)
-library(officer)
-library(rvg)
-
 options(scipen = 999)
-
-## ── PATHS ───────────────────────────────────────────────────────────────────
-RevDir <- file.path("/Users/UNICEF/Library/CloudStorage/OneDrive-SharedLibraries-UNICEF/Health-HIV Data & Analytics - 2025 rev")
-utils      <- str_glue(RevDir, "/unicef-products/{type}/utils")
-wrkfolder  <- str_glue(RevDir, "/unicef-products/{type}/country-specific-charts")
-wiisefolder <- str_glue(RevDir, "/unicef-products/{type}/wiise-outputs")
-dqfolder   <- str_glue(RevDir, "/unicef-products/{type}/data-quality/DQProduct")
-SubnatFuncDir <- file.path("/Users/UNICEF/Library/CloudStorage/OneDrive-SharedLibraries-UNICEF/Health-HIV Data & Analytics - Subnational data analysis/utils/R")
-DummyDataDir <- str_glue(RevDir, "/wuenic_master/dummy")
-
-# source functions
-source(file.path(dqfolder, "R/label_vals.R"))
-source(file.path(dqfolder, "R/funcs.R"))
-source(str_glue("{utils}/R/slide_general_funcs.R"))    # func_slide_v, func_slide_bb, etc.
-source(str_glue("{utils}/R/slide_production_funcs.R")) # func_slide_v_txt, func_slide_v_tlm, etc.
-source(paste0(SubnatFuncDir, "/user_functions_outliers.R"))
-source(paste0(SubnatFuncDir, "/data_quality_funcs.R"))
-
-## ── COLORS ──────────────────────────────────────────────────────────────────
-unicef_colors <- c("#0058AB","#1CABE2","#00833D","#80BD41","#6A1E74",
-                   "#961A49","#E2231A","#F26A21","#FFC20E","#FFF09C","#002759")
-
-source_colors <- c("WHO/UNICEF" = "#0083CF", "Admin" = "#6A1E74", "Official (Government Estimate)" = "#80BD41", "Survey" = "#FFC20E")
+x <- .current_iso3c
 
 ## ── DATA LOADING ─────────────────────────────────────────────────────────────
 
 # master WUENIC dataset
-wuenic_master <- read.csv(file.path(DummyDataDir, "wuenic-master_2025rev.csv")) %>%
-  mutate(ISOCountryCode = toupper(ISOCountryCode)) %>%
-  filter(ISOCountryCode == Current_ISO3,
-         Year >= min_yr_plots, Year <= rev_yr) %>%
+wuenic_master <- read.csv(file.path(DummyDataDir, "wuenic-master_2025rev.csv")) %>% 
   mutate(Vaccine = case_when(
     Vaccine == "hepbb" ~ "HepBB", Vaccine == "hepb3" ~ "HepB3",
     Vaccine == "hib3"  ~ "Hib3",  Vaccine == "rotac" ~ "RotaC",
@@ -99,64 +29,15 @@ wuenic_master$Vaccine <- factor(
   levels = c("BCG","HepBB","DTP1","DTP3","Hib3","HepB3","PCVC","RotaC",
              "POL3","IPV1","IPVC","MCV1","RCV1","MCV2","YFV","MengA","HPVc"))
 
+wuenic_master_current <- wuenic_master %>% 
+  filter(ISOCountryCode == .current_iso3c) %>% 
+  filter(Year >= min_yr_plots, Year <= rev_yr)
+
 # regional info
-regional_info <- read_csv(file.path(DummyUtils, "regional-groups_2026-release.csv")) %>%
-  filter(iso3c == Current_ISO3)
+regional_info <- regional_info %>%
+  filter(iso3c == toupper(.current_iso3c))
 
-# WIISE schedule and introductions
-wiise_schedule <- read_excel(str_glue("{wiisefolder}/output/wiise-schedule-dta_{rev_yr}rev.xlsx"))
-wiise_intro <- read_excel(str_glue("{wiisefolder}/output/wiise-intro-dta_{rev_yr}rev.xlsx"))
-wiise_stockouts <- read_excel(str_glue("{wiisefolder}/output/wiise-stock-dta_{rev_yr}rev.xlsx"))
-
-# latest WUENIC revision (for heatmap / stockout helpers)
-wueniclatestrev <- read_rds(here(str_glue(
-  file.path(RevDir, "/unicef-products/{type}/01_wuenic_dataset-prep/clean_wuenic_MASTER_{rev_yr}rev.rds")
-))) %>%
-  mutate(country = case_when(
-    iso3c == "bol" ~ "Bolivia", iso3c == "caf" ~ "CAR",   iso3c == "cod" ~ "DRC",
-    iso3c == "fsm" ~ "Micronesia", iso3c == "irn" ~ "Iran", iso3c == "png" ~ "PNG",
-    iso3c == "prk" ~ "DPRK",   iso3c == "syr" ~ "Syria",  iso3c == "lao" ~ "Laos",
-    iso3c == "tza" ~ "Tanzania", iso3c == "ven" ~ "Venezuela", iso3c == "tur" ~ "Turkiye",
-    TRUE ~ country)) %>%
-  filter(year >= 2000, lvl_2 %in% c("region_unicef_global_old","region_unicef_ops")) %>%
-  label_vals_millions(target, "target_lbl") %>%
-  label_vals_millions(vaccinated, "vaccinated_lbl") %>%
-  label_vals_millions(unvaccinated, "unvaccinated_lbl")
-
-wueniclatestrev <- clean_reg_names(wueniclatestrev)
-wvax <- unique(wueniclatestrev$vaccine)
-
-# stockout data — clean to match WUENIC vaccine names
-wuenic_stockouts_clean <- wiise_stockouts %>%
-  rename(code = vaccine) %>%
-  mutate(vaccine = tolower(code),
-         vaccine = case_when(
-           vaccine == "opv" ~ "pol3",
-           vaccine == "pcv" ~ "pcv3",
-           vaccine == "ipv" ~ "ipv1;ipv2",
-           vaccine == "hepb" ~ "hepbb;hepb3",
-           vaccine == "hib" ~ "hib3",
-           vaccine == "rotavirus" ~ "rotac",
-           vaccine %in% c("measles-rubella (mr)","measles-mumps-rubella (mmr)") ~ "mcv1;mcv2;rcv1",
-           vaccine == "dtp-hib-hepb-ipv" ~ "dtp1;dtp3;hib3;hepb3",
-           vaccine == "dtp-containing vaccine"~ "dtp1;dtp3;hib3;hepb3",
-           vaccine == "dtp-hepb-ipv" ~ "dtp1;dtp3;ipv1;hepb3;ipv2",
-           vaccine == "dtp-hib-ipv" ~ "dtp1;dtp3;hib3;ipv1;ipv2",
-           vaccine == "dtp-hib-hepb" ~ "dtp1;dtp3;hib3;hepb3",
-           vaccine == "mcv" ~ "mcv1;mcv2",
-           vaccine == "mena" ~ "menga",
-           vaccine == "rcv" ~ "rcv1",
-           TRUE ~ vaccine)) %>%
-  mutate(v = strsplit(vaccine, ";")) %>%
-  unnest_wider(v, names_sep = "_") %>%
-  select(iso3c, year, starts_with("v_")) %>%
-  pivot_longer(-c(iso3c, year), names_to = "v", values_to = "vaccine") %>%
-  select(-v) %>%
-  filter(vaccine %in% wvax) %>%
-  mutate(any_stockout = 1) %>%
-  distinct()
-
-# add stockout markers to wuenic_master
+# add stockout markers
 wuenic_stockouts_master <- wuenic_stockouts_clean %>%
   mutate(iso3c = toupper(iso3c),
          vaccine = case_when(
@@ -165,15 +46,16 @@ wuenic_stockouts_master <- wuenic_stockouts_clean %>%
            vaccine == "menga" ~ "MengA", vaccine == "hpvc"  ~ "HPVc",
            TRUE ~ toupper(vaccine)))
 
-wuenic_master <- wuenic_master %>%
+wuenic_master_current <- wuenic_master_current %>%
+  mutate(iso3c_upper = toupper(ISOCountryCode)) %>% 
   left_join(wuenic_stockouts_master %>% select(iso3c, year, vaccine, any_stockout),
-            by = c("ISOCountryCode" = "iso3c", "Year" = "year", "Vaccine" = "vaccine")) %>%
+            by = c("iso3c_upper" = "iso3c", "Year" = "year", "Vaccine" = "vaccine")) %>%
   mutate(any_stockout = if_else(is.na(any_stockout), 0, any_stockout))
 
 # vaccine introduction table
 tbl_intro_r <- wiise_intro %>%
   mutate(iso3c = tolower(iso3c)) %>%
-  filter(iso3c == x) %>%
+  filter(iso3c == .current_iso3c) %>%
   select(vaccine_name, contains("year_intro")) %>%
   arrange(vaccine_name) %>%
   rename(Vaccine              = vaccine_name,
@@ -184,22 +66,9 @@ tbl_intro_r <- wiise_intro %>%
   select(where(~ !all(is.na(.) | . == ""))) %>%
   mutate(across(where(is.numeric), ~ as.character(.)))
 
-# ad_comments data from wiisemart
-comments <- read.csv(file.path(DataDir, "data_export_WIISE_AD_COMMENTS.csv")) %>% 
-  rename(iso3c = COUNTRY, year = YEAR) %>% 
-  filter(CMT_FIELDS %in% c("FCTACCNUMERCMT", "FCTACCDENOMSOURCECMT", "FCTACCDENOMCMT")) %>% 
-  mutate(CMT_FIELDS = case_when(
-    CMT_FIELDS == "FCTACCNUMERCMT" ~ "factor_accuracy_num",
-    CMT_FIELDS == "FCTACCDENOMSOURCECMT" ~ "explanation_denom_source",
-    CMT_FIELDS == "FCTACCDENOMCMT" ~ "factor_accuracy_denom",
-    TRUE ~ CMT_FIELDS
-  )) %>% 
-  arrange(iso3c, year)
-
 no_data <- function(df) nrow(df) == 0
 
 ## ── GENERATE ALL DATA QUALITY PLOTS ─────────────────────────────────────────
-
 source(file.path(PrjDir, "R/tbl_schedule.R"))
 
 if (!no_data(tbl_intro_r)) {
@@ -240,7 +109,7 @@ for (name in names(ggplot_objects)) {
 ## ── BUILD POWERPOINT ─────────────────────────────────────────────────────────
 doc <- read_pptx(str_glue("{utils}/region-specific-blank-slides copy.pptx"))
 
-slide_title <- CountryName
+slide_title <- .current_country
 rect <- rectGrob(gp = gpar(fill = "black", col = NA)) # top-line message underline
 
 # ── COVER ────────────────────────────────────────────────────────────────────
@@ -248,7 +117,7 @@ doc <- add_slide(doc, layout = "cover_country", master = "Office Theme")
 doc <- ph_with(
   x = doc,
   block_list(fpar(
-    ftext(CountryName,
+    ftext(.current_country,
           prop = fp_text(font.size = 40, color = "white")),
     fp_p = fp_par(text.align = "center"))),
   location = ph_location("body", left = 1.9, top = 2.86, width = 9.5, height = 2))
@@ -265,7 +134,7 @@ doc <- ph_with(
 doc <- remove_slide(doc, index = 1) # remove the blank first slide in the template
 
 # ── INTRO SLIDE (wuenic info) ─────────────────────────────────────────────────
-doc <- add_slide(doc, layout = "intro_slide", master = "Office Theme")
+#doc <- add_slide(doc, layout = "intro_slide", master = "Office Theme")
 
 # ── EJRF INFO-- ───────────────────────────────────────────────────────────────
 doc <- add_slide(doc, layout = "1_intro_slide", master = "Office Theme")
@@ -449,7 +318,7 @@ func_slide_v_txt(paste0(
 # DTP3–PCVC co-administration
 func_slide_v(dml_plt_coadmin_dtp_pcv)
 func_slide_v_txt(paste0(
-  "Admin coverage for DTP3 and PCVC, which are co-administered at ", dtp3_pcvc_time, " in ", CountryName,
+  "Admin coverage for DTP3 and PCVC, which are co-administered at ", dtp3_pcvc_time, " in ", .current_country,
   ".\n\nDivergence between the two series may indicate a reporting inconsistency."))
 
 
@@ -490,7 +359,7 @@ func_slide_bb("Admin Data Comments")
 last_5_yrs <- (rev_yr - n_years_comparison_plot + 1):rev_yr
 
 comments_country <- comments %>%
-  filter(iso3c == Current_ISO3,
+  filter(iso3c == .current_iso3c,
          year %in% last_5_yrs,
          !is.na(SOURCE_CMT), SOURCE_CMT != "", SOURCE_CMT != "NK") %>%
   select(iso3c, year, CMT_FIELDS, SOURCE_CMT) %>%
@@ -538,11 +407,11 @@ make_comments_tbl <- function(df, category) {
 # ── RENDER ONE SLIDE PER CATEGORY (only if data exists) ──────────────────────
 comment_categories <- list(
   list(label = "Numerator Accuracy",  field = "Numerator Accuracy",
-       note  = paste0("Factors limiting the accuracy of the numerator as reported by ", CountryName, ".")),
+       note  = paste0("Factors limiting the accuracy of the numerator as reported by ", .current_country, ".")),
   list(label = "Denominator Source",  field = "Denominator Source",
        note  = "Explanation of how the denominators (target population) are obtained."),
   list(label = "Denominator Accuracy", field = "Denominator Accuracy",
-       note  = paste0("Factors limiting the accuracy of the denominator as reported by ", CountryName, "."))
+       note  = paste0("Factors limiting the accuracy of the denominator as reported by ", .current_country, "."))
 )
 
 for (cat in comment_categories) {
@@ -617,9 +486,9 @@ if (nrow(comments_summary) > 0) {
 }
 
 # ── SAVE ─────────────────────────────────────────────────────────────────────
-folder_path <- str_glue("{dqfolder}/outputs")
+folder_path <- str_glue("{dqfolder}/outputs/all_countries")
 dir.create(folder_path, recursive = TRUE, showWarnings = FALSE)
 
-print(doc, target = file.path(folder_path, paste0(x, "_en.pptx")))
+print(doc, target = file.path(folder_path, paste0(.current_country, "_DQ.pptx")))
 
-message("✓ Data quality report saved to: ", folder_path)
+#message("✓ Data quality report saved to: ", folder_path)

@@ -15,57 +15,22 @@ flag_colors <- c("FALSE" = "black", "TRUE" = "red")
 
 # read in geojson with country outlines
 # cty_outline_shp <- st_read(file.path(DummyUtils, "adm0.geojson")) %>% 
-#   filter(ISO3 == Current_ISO3)
+#   filter(ISO3 == .current_iso3c)
 
 # read in languages file
 # language <- read_excel(file.path(DummyUtils, "Languages.xlsx")) %>% 
-#   filter(ISO3_code == Current_ISO3) %>% 
+#   filter(ISO3_code == .current_iso3c) %>% 
 #   pull(Language)
 
 # set system environment to display in the country's language (for use in plots)
 #Sys.setenv(LANGUAGE = language) 
 
 # ======================================================================================================================
-### Data Prep
-# ======================================================================================================================
-
-# master wuenic dataset
-wuenic_master <- read.csv(file.path(DummyDataDir, "wuenic-master_2025rev.csv"))
-
-wuenic_master <- wuenic_master %>% 
-  mutate(ISOCountryCode = toupper(ISOCountryCode)) %>%
-  filter(ISOCountryCode == Current_ISO3) %>% 
-  filter(Year >= min_yr_plots, Year <= rev_yr) %>% 
-  mutate(Vaccine = case_when(Vaccine == "hepbb" ~ "HepBB",
-                             Vaccine == "hepb3" ~ "HepB3",
-                             Vaccine == "hib3" ~ "Hib3",
-                             Vaccine == "rotac" ~ "RotaC",
-                             Vaccine == "menga" ~ "MengA",
-                             Vaccine == "hpvc" ~ "HPVc",
-                             TRUE ~ toupper(Vaccine))) %>% 
-  rename(Admin = AdministrativeCoverage, Official = GovernmentEstimate, Survey = SurveyInformation) %>% 
-  relocate(Admin, .after = WUENIC) %>% relocate(Official, .after = Admin) %>% relocate(Survey, .after = Official) %>% 
-  relocate(ChildrenVaccinated, .after = Survey) %>% relocate(ChildrenInTarget, .after = ChildrenVaccinated)
-
-wuenic_master$Vaccine <- factor(wuenic_master$Vaccine, levels = c("BCG", "HepBB", "DTP1", "DTP3", "Hib3", "HepB3", "PCVC", "RotaC", 
-                                                                  "POL3", "IPV1", "IPVC", "MCV1", "RCV1", "MCV2", "YFV", "MengA","HPVc"))
-
-# cty_outline_shp <- cty_outline_shp %>%
-#   st_make_valid() %>%
-#   st_simplify(dTolerance = 0.01) %>%
-#   st_transform(crs = st_crs(4326))
-
-# ======================================================================================================================
 ### Intro Slides
 # ======================================================================================================================
 
-# cty_map <- ggplot(cty_outline_shp) +
-#   geom_sf(fill = "#1CABE2", color = "white", linewidth = 0.5) +
-#   theme_void()
-
-# # regional info file
-regional_info <- read_csv(file.path(DummyUtils, "regional-groups_2026-release.csv")) %>%
-  filter(iso3c == Current_ISO3)
+# regional info file
+regional_info <- regional_info %>% filter(iso3c == .current_iso3c)
 
 # intro paragraph using regional info df
 intro_paragraph <- paste0(
@@ -85,175 +50,12 @@ intro_paragraph <- paste0(
 intro_paragraph
 
 # ======================================================================================================================
-### Schedule & Stockouts
-# ======================================================================================================================
-
-## ---------------------------------------------------------------------------------------------------------------------
-### Create schedule table using tbl_schedule.R
-## ---------------------------------------------------------------------------------------------------------------------
-
-# read in wiise schedule and run tbl_schedule.R
-wiise_schedule <- read_excel(str_glue("{wiisefolder}/output/wiise-schedule-dta_{rev_yr}rev.xlsx"))
-source(file.path(PrjDir, "R/tbl_schedule.R"))
-
-## ---------------------------------------------------------------------------------------------------------------------
-### Create vaccine introductions table using tbl_intro.R
-## ---------------------------------------------------------------------------------------------------------------------
-
-wiise_intro <- read_excel(str_glue("{wiisefolder}/output/wiise-intro-dta_{rev_yr}rev.xlsx"))
-
-## tbl_intro :: year of vaccine introduction ----
-tbl_intro_r <- wiise_intro %>%
-  mutate(iso3c = tolower(iso3c)) %>%
-  filter(iso3c == x) %>%
-  select(vaccine_name, contains("year_intro")) %>%
-  arrange(vaccine_name) %>%
-  rename(Vaccine = vaccine_name, 
-         `National introduction` = year_intro_national,
-         `Partial introduction` = year_intro_partial,
-         `Risk groups` = year_intro_risk_groups,
-         `Risk areas` = year_intro_risk_area) %>%
-  # remove columns that are completely empty
-  select(where(~ !all(is.na(.) | . == ""))) %>%
-  # make numeric values character and set NA to ""
-  mutate(across(where(is.numeric), ~ as.character(.)))
-
-if (no_data(tbl_intro_r) == FALSE) {
-  source(file.path(PrjDir, "R/tbl_intro.R"))
-}
-
-# clean vaccine names
-wiise_intro <- wiise_intro %>% 
-  mutate(vaccine = case_when(
-    vaccine == "HEPB"         ~ "HepB3",
-    vaccine == "HepB_BD"      ~ "HepB_BD", # Often kept as BD or HepB0
-    vaccine == "HIB"          ~ "Hib3",
-    vaccine == "IPV"          ~ "IPV1",
-    vaccine == "IPV2"         ~ "IPVC",
-    vaccine == "MMCV"         ~ "MCV1",
-    vaccine == "MCV2"         ~ "MCV2",
-    vaccine == "PNEUMO_CONJ"  ~ "PCVC",
-    vaccine == "ROTAVIRUS"    ~ "RotaC",
-    vaccine == "RUBELLA"      ~ "RCV1",
-    vaccine == "YF"           ~ "YFV",
-    TRUE ~ vaccine 
-  ))
-
-## ---------------------------------------------------------------------------------------------------------------------
-### Create vaccine stockouts table using tbl_stock.R
-## ---------------------------------------------------------------------------------------------------------------------
-
-wiise_stockouts <- read_excel(str_glue("{wiisefolder}/output/wiise-stock-dta_{rev_yr}rev.xlsx"))
-
-# latest revision complete
-wueniclatestrev <- read_rds(here(str_glue(file.path(RevDir, "/unicef-products/{type}/01_wuenic_dataset-prep/clean_wuenic_MASTER_{rev_yr}rev.rds")))) %>%
-  mutate(country = case_when(iso3c == "bol" ~ "Bolivia",
-                             iso3c == "caf" ~ "CAR",
-                             iso3c == "cod" ~ "DRC",
-                             iso3c == "fsm" ~ "Micronesia",
-                             iso3c == "irn" ~ "Iran",
-                             iso3c == "png" ~ "PNG",
-                             iso3c == "prk" ~ "DPRK",
-                             iso3c == "syr" ~ "Syria",
-                             iso3c == "lao" ~ "Laos",
-                             iso3c == "tza" ~ "Tanzania",
-                             iso3c == "ven" ~ "Venezuela",
-                             iso3c == "tur" ~ "Turkiye",
-                             TRUE ~ country)) %>%
-  filter(year >= 2000,
-         lvl_2 %in% c("region_unicef_global_old", "region_unicef_ops")) %>%
-  label_vals_millions(target, "target_lbl") %>%
-  label_vals_millions(vaccinated, "vaccinated_lbl") %>%
-  label_vals_millions(unvaccinated, "unvaccinated_lbl") 
-
-wueniclatestrev <- clean_reg_names(wueniclatestrev)  # clean region names
-
-## prep data :: stock-outs ----
-# list of wuenic vaccines
-wvax <- unique(wueniclatestrev$vaccine) 
-
-# df identifying wuenic vaccines with any stockout (national or subnational)
-wuenic_stockouts <- wiise_stockouts %>%
-  rename(code = vaccine) %>%
-  # clean to match wuenic vaccine names
-  mutate(vaccine = tolower(code),
-         vaccine = case_when(vaccine == "opv" ~ "pol3",
-                             vaccine == "pcv" ~ "pcv3",
-                             vaccine == "ipv" ~ "ipv1;ipv2",
-                             vaccine == "hepb" ~ "hepbb;hepb3",
-                             vaccine == "hib" ~ "hib3",
-                             vaccine == "rotavirus" ~ "rotac",
-                             vaccine %in% c("measles-rubella (mr)","measles-mumps-rubella (mmr)") ~ "mcv1;mcv2;rcv1",
-                             vaccine == "dtp-hib-hepb-ipv" ~ "dtp1;dtp3;hib3;hepb3",
-                             vaccine == "dtp-containing vaccine" ~ "dtp1;dtp3;hib3;hepb3",
-                             vaccine == "dtp-hepb-ipv" ~ "dtp1;dtp3;ipv1;hepb3;ipv2",
-                             vaccine == "dtp-hib-ipv" ~ "dtp1;dtp3;hib3;ipv1;ipv2",
-                             vaccine == "dtp-hib-hepb" ~ "dtp1;dtp3;hib3;hepb3",
-                             vaccine == "mcv" ~ "mcv1;mcv2",
-                             vaccine == "mena" ~ "menga",
-                             vaccine == "rcv" ~ "rcv1",
-                             TRUE ~ vaccine)) %>%
-  # split vaccines into separate columns using ; delimeter
-  mutate(v = strsplit(vaccine, ";")) %>%
-  unnest_wider(v, names_sep = "_") %>%
-  # select relevant columns
-  select(iso3c, year, starts_with("v_")) %>%
-  # pivot longer
-  pivot_longer(-c(iso3c, year), names_to = "v", values_to = "vaccine") %>%
-  select(-v) %>%
-  filter(vaccine %in% wvax) %>%
-  mutate(any_stockout = 1) %>%
-  distinct()
-
-## tbl_stock :: wiise stock data ----
-source(file.path(PrjDir, "R/tbl_stock.R"))
-
-# add stockout markers to wuenic_master
-wuenic_stockouts <- wuenic_stockouts %>% 
-  mutate(iso3c = toupper(iso3c)) %>% 
-  mutate(vaccine = case_when(vaccine == "hepbb" ~ "HepBB",
-                             vaccine == "hepb3" ~ "HepB3",
-                             vaccine == "hib3" ~ "Hib3",
-                             vaccine == "rotac" ~ "RotaC",
-                             vaccine == "menga" ~ "MengA",
-                             vaccine == "hpvc" ~ "HPVc",
-                             TRUE ~ toupper(vaccine)))
-wuenic_master <- wuenic_master %>% 
-  left_join(wuenic_stockouts %>% select(iso3c, year, vaccine, any_stockout), 
-            by = c("ISOCountryCode" = "iso3c", "Year" = "year", "Vaccine" = "vaccine")) %>%
-  mutate(any_stockout = if_else(is.na(any_stockout), 0, any_stockout))
-
-# ======================================================================================================================
 ### Coverage & Outlier Detection
 # ======================================================================================================================
 
 ## ---------------------------------------------------------------------------------------------------------------------
 ### Coverage Heatmap (WUENIC data)
 ## ---------------------------------------------------------------------------------------------------------------------
-
-# HPV data
-hpv_dta <- read_excel(str_glue(file.path(HPVDir, '{hpv_rev_yr} revision/final/hpv_estimates_wuenic{hpv_rev_yr}rev.xlsx'))) %>%
-  filter(lvl_2 %in% c("region_unicef_global_old", "region_unicef_ops")) %>%
-  mutate(vaccine = case_when(
-    # programme coverage
-    vaccine_code == "PRHPV1_M" ~ "HPV1 Males",
-    vaccine_code == "PRHPVC_M" ~ "HPVc Males",
-    vaccine_code == "PRHPV1_F" ~ "HPV1 Females",
-    vaccine_code == "PRHPVC_F" ~ "HPVc Females",
-    # by age 15
-    vaccine_code == "15HPV1_M" ~ "HPV1 Males, by age 15",
-    vaccine_code == "15HPVC_M" ~ "HPVc Males, by age 15",
-    vaccine_code == "15HPV1_F" ~ "HPV1 Females, by age 15",
-    vaccine_code == "15HPVC_F" ~ "HPVc Females, by age 15",
-    TRUE ~ NA_character_)) %>%
-  label_vals_millions(target, "target_lbl") %>%
-  label_vals_millions(vaccinated, "vaccinated_lbl") %>%
-  label_vals_millions(unvaccinated, "unvaccinated_lbl") 
-
-hpv_dta <- clean_reg_names(hpv_dta)  %>% # clean region names
-  filter(!is.na(coverage)) %>%
-  select(lvl_1, lvl_2, lvl_3, iso3c, country, year, vaccine_code, vaccine, coverage) %>%
-  mutate(coverage = round(coverage, 0))
 
 hpv <- hpv_dta %>%
   filter(lvl_2 == "region_unicef_ops", iso3c == x, year >= 2000)
@@ -262,18 +64,17 @@ hpv <- hpv_dta %>%
 # includes stock-out data
 source(file.path(PrjDir, "R/all_vax_heatmap.R"))
 
-
 ## ---------------------------------------------------------------------------------------------------------------------
 ### Summary Table: Coverage by Vaccine and Source
 ## ---------------------------------------------------------------------------------------------------------------------
 
 # data prep
-recent_years <- sort(unique(wuenic_master$Year), decreasing = TRUE)[1:n_years_comparison_plot]
+recent_years <- sort(unique(wuenic_master_current$Year), decreasing = TRUE)[1:n_years_comparison_plot]
 
 min_yr <- min(recent_years)
 max_yr <- max(recent_years)
 
-summary_long <- wuenic_master %>%
+summary_long <- wuenic_master_current %>%
   filter(Year %in% recent_years) %>%
   select(Vaccine, Year, WUENIC, Admin, Official) %>%
   pivot_longer(cols = c(WUENIC, Admin, Official), names_to = "Source", values_to = "Coverage") %>%
@@ -307,7 +108,7 @@ plt_summary_table <- ggplot(summary_long, aes(x = Year, y = Vaccine, fill = Cove
   facet_wrap(~Source, ncol = 3) +
   theme_minimal() +
   labs(
-    title = paste0("Coverage Trends by Vaccine and Source, ", CountryName, ", ", min_yr, "–", max_yr),
+    title = paste0("Coverage Trends by Vaccine and Source, ", .current_country, ", ", min_yr, "–", max_yr),
     x = "Year", y = NULL,
     fill = "Coverage (%)",
     caption = "WHO/UNICEF HPV coverage estimates not included in table."
@@ -330,7 +131,7 @@ plt_summary_table
 ### Coverage Line Plots for all 4 Indicators (WUENIC, Admin, Official, Survey)
 ## ---------------------------------------------------------------------------------------------------------------------
 
-all_line_data <- wuenic_master %>% 
+all_line_data <- wuenic_master_current %>% 
   arrange(Vaccine, Year) %>%
   group_by(Vaccine) %>%
   pivot_longer(cols = c(WUENIC, Admin, Official, Survey), names_to = "Source", values_to = "Coverage") %>%
@@ -357,7 +158,7 @@ plt_all_vax_line <- ggplot(all_line_data, aes(x = Year, y = Coverage, color = So
   scale_y_continuous(limits = c(min_cov, max_cov), breaks = seq(min_cov, max_cov, by = 25), labels = scales::label_number(suffix = "%")) +
   theme_minimal() +
   labs(
-    title  = paste0("Coverage Trends by Vaccine and Source, ", CountryName, ", ", min_yr_plots, "–", rev_yr),
+    title  = paste0("Coverage Trends by Vaccine and Source, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
     x = "Year", y = "Coverage (%)", color = "Data Source", shape = "Data Source"
   ) +
   theme(
@@ -394,7 +195,7 @@ plt_selected_vax_line <- ggplot(selected_line_data, aes(x = Year, y = Coverage, 
   scale_y_continuous(limits = c(min_cov, max_cov), breaks = seq(min_cov, max_cov, by = 25), labels = scales::label_number(suffix = "%")) +
   theme_minimal() +
   labs(
-    title  = paste0("Coverage Trends by Vaccine and Source, ", CountryName, ", ", min_yr_plots, "–", rev_yr),
+    title  = paste0("Coverage Trends by Vaccine and Source, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
     x = "Year", y = "Coverage (%)", color = "Data Source", shape = "Data Source"
   ) +
   theme(
@@ -412,7 +213,7 @@ plt_selected_vax_line <- ggplot(selected_line_data, aes(x = Year, y = Coverage, 
 ### Coverage > 100% and sudden drops flagged by vaccine and year (Admin data)
 ## ---------------------------------------------------------------------------------------------------------------------
 
-combined_flag_data <- wuenic_master %>%
+combined_flag_data <- wuenic_master_current %>%
   arrange(Vaccine, Year) %>%
   group_by(Vaccine) %>%
   mutate(
@@ -438,7 +239,7 @@ plt_coverage_flags <- ggplot(combined_flag_data, aes(x = Year, y = Admin)) +
   scale_color_manual(values = c("Normal" = "black", ">100%" = "#FFC20E", "±10pp change" = "#E2231A")) +
   theme_minimal() +
   labs(
-    title = paste0("Admin Coverage Flags by Vaccine and Year, ", CountryName, ", ", min_yr_plots, "–", rev_yr),
+    title = paste0("Admin Coverage Flags by Vaccine and Year, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
     subtitle = paste0("Orange = coverage > 100%  |  Red = ± ", pct_threshold*100, "pp change from previous year"),
     x = "Year", y = "Admin Coverage (%)",
     color = "Flag Type"
@@ -472,7 +273,7 @@ plt_selected_coverage_flags <- ggplot(selected_flag_data, aes(x = Year, y = Admi
   scale_color_manual(values = c("Normal" = "black", ">100%" = "#FFC20E", "±10pp change" = "#E2231A")) +
   theme_minimal() +
   labs(
-    title = paste0("DTP1, DTP3, and MCV1 Admin Coverage Flags by Year, ", CountryName, ", ", min_yr_plots, "–", rev_yr),
+    title = paste0("DTP1, DTP3, and MCV1 Admin Coverage Flags by Year, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
     subtitle = paste0("Orange = coverage > 100%  |  Red = ± ", pct_threshold*100, "pp change from previous year"),
     x = "Year", y = "Admin Coverage (%)",
     color = "Flag Type"
@@ -490,10 +291,10 @@ plt_selected_coverage_flags <- ggplot(selected_flag_data, aes(x = Year, y = Admi
   )
 
 ## ---------------------------------------------------------------------------------------------------------------------
-### Plot: Admin coverage vs WUENIC estimate — large gaps flagged (using wuenic_master)
+### Plot: Admin coverage vs WUENIC estimate — large gaps flagged (using wuenic_master_current)
 ## ---------------------------------------------------------------------------------------------------------------------
 
-gap_data <- wuenic_master %>%
+gap_data <- wuenic_master_current %>%
   mutate(
     gap = Admin - WUENIC,
     flag_large_gap = abs(gap) > pct_threshold*100
@@ -523,7 +324,7 @@ plt_admin_vs_wuenic <- ggplot(gap_data, aes(x = Year)) +
   scale_x_continuous(breaks = seq(min(gap_data$Year), max(gap_data$Year), by = 2)) +
   theme_minimal() +
   labs(
-    title    = paste0("Admin vs. WHO/UNICEF Coverage Estimate, ", CountryName, ", ", min_yr_plots, "–", rev_yr),
+    title    = paste0("Admin vs. WHO/UNICEF Coverage Estimate, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
     subtitle = paste0("Red lines indicate gaps > ", pct_threshold * 100, " percentage points"),
     x = "Year", y = "Coverage (%)",
     color = "Large Gap", linetype = "Source"
@@ -545,7 +346,7 @@ plt_admin_vs_wuenic
 ### Plot: Same admin vs. wuenic plot but with second threshold
 ## ---------------------------------------------------------------------------------------------------------------------
 
-gap_data2 <- wuenic_master %>%
+gap_data2 <- wuenic_master_current %>%
   mutate(
     gap = Admin - WUENIC,
     flag_large_gap = abs(gap) > second_pct_threshold*100
@@ -575,7 +376,7 @@ plt_admin_vs_wuenic2 <- ggplot(gap_data2, aes(x = Year)) +
   scale_x_continuous(breaks = seq(min(gap_data2$Year), max(gap_data2$Year), by = 2)) +
   theme_minimal() +
   labs(
-    title    = paste0("Admin vs. WHO/UNICEF Coverage Estimate, ", CountryName, ", ", min_yr_plots, "–", rev_yr),
+    title    = paste0("Admin vs. WHO/UNICEF Coverage Estimate, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
     subtitle = paste0("Red lines indicate gaps > ", second_pct_threshold * 100, " percentage points"),
     x = "Year", y = "Coverage (%)",
     color = "Large Gap", linetype = "Source"
@@ -597,7 +398,7 @@ plt_admin_vs_wuenic2
 ### Plot: Admin coverage vs Official coverage — large gaps flagged (using wiise_admin_official)
 ## ---------------------------------------------------------------------------------------------------------------------
 
-gap_data_2 <- wuenic_master %>%
+gap_data_2 <- wuenic_master_current %>%
   mutate(
     gap = Admin - Official,
     flag_large_gap = abs(gap) > pct_threshold*100
@@ -626,7 +427,7 @@ plt_admin_vs_official <- ggplot(gap_data_2, aes(x = Year)) +
   scale_x_continuous(breaks = seq(min(gap_data_2$Year), max(gap_data_2$Year), by = 2)) +
   theme_minimal() +
   labs(
-    title = paste0("Admin vs. Official (Government Estimate) Coverage, ", CountryName, ", ", min_yr_plots, "–", rev_yr),
+    title = paste0("Admin vs. Official (Government Estimate) Coverage, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
     subtitle = paste0("Red lines indicate gaps > ", pct_threshold * 100, " percentage points"),
     x = "Year", y = "Coverage (%)",
     linetype = "Source"
@@ -649,13 +450,13 @@ plt_admin_vs_official
 ### Plot: Year-to-year % change in numerator (# children vaccinated) flagged if over % threshold (pct_threshold)
 ## ---------------------------------------------------------------------------------------------------------------------
 
-plot_data_numerators_all <- wuenic_master %>%
+plot_data_numerators_all <- wuenic_master_current %>%
   arrange(Vaccine, Year) %>%
   group_by(Vaccine) %>%
   mutate(
     prev_num   = lag(ChildrenVaccinated),
     pct_change = ((ChildrenVaccinated - prev_num) / prev_num) * 100,
-    is_flagged = abs(pct_change) > pct_threshold
+    is_flagged = abs(pct_change) > pct_threshold*100
   ) %>%
   ungroup()
 
@@ -722,20 +523,19 @@ y_min_num <- -y_max_num
 scale_factor <- max_doses_num / (y_max_num - y_min_num)
 if (is.na(scale_factor) || scale_factor == 0) scale_factor <- 1
 
-# ── STOCKOUT SHADING DATA ─────────────────────────────────────────────────────
-stockout_data <- plot_data_numerators_all %>%
-  filter(any_stockout == 1) %>%
-  select(Vaccine, Year) %>%
-  distinct() %>%
-  mutate(xmin_num = Year - 0.5, xmax_num = Year + 0.5)
-
-first_year_w_numerator_data <- plot_data_numerators_all %>%
-  filter(Vaccine %in% vaccines_with_numerator_data, !is.na(ChildrenVaccinated)) %>%
-  group_by(Vaccine) %>%
-  summarise(first_year = min(Year), .groups = "drop")
-
 # ── PLOT: vaccines WITH sufficient data ───────────────────────────────────────
 if (length(vaccines_with_numerator_data) > 0) {
+  
+  stockout_data <- plot_data_numerators_all %>%
+    filter(any_stockout == 1) %>%
+    select(Vaccine, Year) %>%
+    distinct() %>%
+    mutate(xmin_num = Year - 0.5, xmax_num = Year + 0.5)
+  
+  first_year_w_numerator_data <- plot_data_numerators_all %>%
+    filter(Vaccine %in% vaccines_with_numerator_data, !is.na(ChildrenVaccinated)) %>%
+    group_by(Vaccine) %>%
+    summarise(first_year = min(Year), .groups = "drop")
   
   plot_data_sufficient <- plot_data_numerators_all %>% filter(Vaccine %in% vaccines_with_numerator_data)
   stockout_sufficient  <- stockout_data %>% filter(Vaccine %in% vaccines_with_numerator_data)
@@ -753,7 +553,7 @@ if (length(vaccines_with_numerator_data) > 0) {
     frozen_pct_threshold  <- pct_threshold
     frozen_year_min       <- min(plot_data_sufficient$Year)
     frozen_year_max       <- max(plot_data_sufficient$Year)
-    frozen_title          <- paste0("Year-to-Year % Change in Numerator (# Children Vaccinated), ", CountryName, ", ", min_yr_plots, "–", rev_yr)
+    frozen_title          <- paste0("Year-to-Year % Change in Numerator (# Children Vaccinated), ", .current_country, ", ", min_yr_plots, "–", rev_yr)
     frozen_subtitle       <- paste0("Line shows raw counts; points show % annual change\n",
                                     "Red points indicate changes exceeding +/- ", pct_threshold * 100, "%\n",
                                     "Orange shading indicates vaccine stockout")
@@ -845,7 +645,7 @@ plt_perc_change_line
 ### Denom Plot 1: Year-to-year admin denominator change flagged if over threshold
 ## ---------------------------------------------------------------------------------------------------------------------
 
-denom_change_data <- wuenic_master %>%
+denom_change_data <- wuenic_master_current %>%
   group_by(Vaccine) %>%
   mutate(
     prev_target      = lag(ChildrenInTarget),
@@ -983,7 +783,7 @@ if (length(vaccines_with_denominator_data) > 0) {
     frozen_outlier_caption <- outlier_caption
     frozen_year_min     <- min(plot_data_sufficient$Year)
     frozen_year_max     <- max(plot_data_sufficient$Year)
-    frozen_title        <- paste0("Year-to-Year % Change in Denominator (# Children in Target), ", CountryName, ", ", min_yr_plots, "–", rev_yr)
+    frozen_title        <- paste0("Year-to-Year % Change in Denominator (# Children in Target), ", .current_country, ", ", min_yr_plots, "–", rev_yr)
     frozen_subtitle     <- paste0("Green line shows target population counts; points show % annual change\n",
                                   "Red points indicate changes exceeding ±", pct_threshold * 100, "%\n",
                                   "Orange shading indicates vaccine stockout")
@@ -1072,7 +872,7 @@ plt_denom_change
 ### Denom Plot 1 (version b): Year-to-year admin denominator change flagged if over threshold
 ## ---------------------------------------------------------------------------------------------------------------------
 
-# denom_change_data <- wuenic_master %>%
+# denom_change_data <- wuenic_master_current %>%
 #   group_by(Vaccine) %>%
 #   mutate(
 #     prev_target = lag(ChildrenInTarget),
@@ -1162,7 +962,7 @@ plt_denom_change
 #     axis.text.x  = element_text(angle = 45, hjust = 1, size = 8)
 #   ) +
 #   labs(
-#     title = paste0("Year-to-Year % Change in Denominator (# Children in Target), ", CountryName, ", ", min_yr_plots, "–", rev_yr),
+#     title = paste0("Year-to-Year % Change in Denominator (# Children in Target), ", .current_country, ", ", min_yr_plots, "–", rev_yr),
 #     subtitle = paste0(
 #       "Line shows raw counts; points show % annual change\n",
 #       "Dashed lines show IQR-based outlier thresholds: ",
@@ -1177,8 +977,8 @@ plt_denom_change
 ### Denom Plot 2: Live births (BCG) vs surviving infants (DTP1) over time
 ## ---------------------------------------------------------------------------------------------------------------------
 
-# separate birth and surviving infants data from wuenic_master and reshape for plotting
-births_vs_si_data <- wuenic_master %>%
+# separate birth and surviving infants data from wuenic_master_current and reshape for plotting
+births_vs_si_data <- wuenic_master_current %>%
   select(Year, Vaccine, ChildrenInTarget) %>%
   filter(Vaccine %in% c("BCG", "DTP1")) %>%
   mutate(target_grp = case_when(
@@ -1197,7 +997,7 @@ bcg_in_schedule <- "BCG" %in% tbl_schedule_r$Vaccine
 availability_footnote <- if (!bcg_data_available && !dtp1_data_available) {
   "NOTE: No denominator data available for either BCG or DTP1."
 } else if (!bcg_data_available && !bcg_in_schedule) {
-  "NOTE: No denominator data available for BCG (Live Births), which is not in the current schedule."
+  paste0("NOTE: BCG is not in ", .current_country, "'s current schedule, so there is no denominator data available.")
 } else if(!bcg_data_available && bcg_in_schedule) {
   "NOTE: No denominator data available for BCG (Live Births)."
 } else if (!dtp1_data_available) {
@@ -1240,7 +1040,7 @@ plt_births_vs_si <- ggplot(births_vs_si_data, aes(x = Year, y = ChildrenInTarget
   scale_color_manual(values = c("Live Births (BCG)" = "#E87722", "Surviving Infants (DTP1)" = "#0083CF")) +
   theme_minimal() +
   labs(
-    title = paste0("Admin Data: Live Births (BCG) vs Surviving Infants (DTP1) Denominators, ", CountryName, ", ", min_yr_plots, "–", rev_yr),
+    title = paste0("Admin Data: Live Births (BCG) vs Surviving Infants (DTP1) Denominators, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
     x = "Year", y = "Target Population",
     color = "Denominator Type",
     caption = availability_footnote
@@ -1260,7 +1060,7 @@ plt_births_vs_si <- ggplot(births_vs_si_data, aes(x = Year, y = ChildrenInTarget
 ### Denom Plot 3: Year-to-year % change for Live Births (BCG) and Surviving Infants (DTP1)
 ## ---------------------------------------------------------------------------------------------------------------------
 
-denom_types_data <- wuenic_master %>%
+denom_types_data <- wuenic_master_current %>%
   filter(Vaccine %in% c("BCG", "DTP1")) %>%
   mutate(DenomType = case_when(
     Vaccine == "BCG"  ~ "Live Births",
@@ -1328,7 +1128,7 @@ if(denom_data_available) {
       plot.subtitle = element_text(hjust = 0.5, size = 11)
     ) +
     labs(
-      title = paste0("Denominator Stability Check, ", CountryName, ", ", min_yr_plots, "–", rev_yr),
+      title = paste0("Denominator Stability Check, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
       subtitle = paste0("Line shows raw counts; points show % annual change\n", 
                         "Red points indicate changes exceeding +/- ", pct_threshold * 100, "%"))
   })
@@ -1339,7 +1139,7 @@ if(denom_data_available) {
               color = "red", size = 5) +
     theme_void() +
     labs(
-      title = paste0("Denominator Stability Check, ", CountryName, ", ", min_yr_plots, "–", rev_yr),
+      title = paste0("Denominator Stability Check, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
       subtitle = "Insufficient data for year-to-year % change calculation"
     ) +
     theme(
@@ -1354,7 +1154,7 @@ if(denom_data_available) {
 ### Dropout & Vaccine Relationships
 # ======================================================================================================================
 
-dropout_base <- wuenic_master %>%
+dropout_base <- wuenic_master_current %>%
   select(Year, Vaccine, Admin, ChildrenVaccinated)
 
 ## ---------------------------------------------------------------------------------------------------------------------
@@ -1421,7 +1221,7 @@ plt_dropout_with_rate <- ggplot() +
   scale_color_manual(values = unicef_colors) +
   theme_minimal() +
   labs(
-    title = paste0("Key Vaccine Dropout, ", CountryName, ", ", min_yr_plots, "–", rev_yr),
+    title = paste0("Key Vaccine Dropout, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
     subtitle = "Lines = Admin Coverage | Bars = Dropout %",
     x = "Year", y = "Admin Coverage / Dropout %",
     caption = "Dropout % = (Dose 1 - Dose 2) / Dose 1 * 100"
@@ -1444,7 +1244,7 @@ plt_dropout_with_rate
 ### DTP3-PCVC Co-administration Plot
 ## ---------------------------------------------------------------------------------------------------------------------
 
-selected_coadmin <- wuenic_master %>% 
+selected_coadmin <- wuenic_master_current %>% 
   filter(Vaccine %in% c("DTP3", "PCVC"))
 
 plt_coadmin_dtp_pcv <- ggplot(selected_coadmin, aes(x = Year, y = Admin, color = Vaccine)) +
@@ -1457,7 +1257,7 @@ plt_coadmin_dtp_pcv <- ggplot(selected_coadmin, aes(x = Year, y = Admin, color =
   scale_x_continuous(breaks = seq(min(selected_coadmin$Year), max(selected_coadmin$Year), by = 2)) +
   theme_minimal() +
   labs(
-    title = paste0("Admin Coverage of DTP3 and PCVC (Co-administered), ", CountryName, ", ", min_yr_plots, "–", rev_yr),
+    title = paste0("Admin Coverage of DTP3 and PCVC (Co-administered), ", .current_country, ", ", min_yr_plots, "–", rev_yr),
     x = "Year", 
     y = "Admin Coverage (%)",
     color = "Vaccine"
@@ -1477,13 +1277,14 @@ plt_coadmin_dtp_pcv
 
 # get which time the dtp3 and pcvc vaccines are administered
 dtp3_pcvc_time <- tbl_schedule_r %>%
-  filter(Vaccine %in% c("DTAPHIBHEPBIPV", "PCV")) %>%
+  filter(Vaccine %in% c("PCV", "DTAPHIBHEPBIPV", "DTWPHIBHEPB", "DTAPHIBIPV", "DTAPIPV", "DTWPHIBHEPBIPV",
+                        "DTAP", "DTAPHIBHEPB", "DTAPHEPBIPV", "DTAPHIB", "DTWP")) %>%
   pivot_longer(cols = any_of(as.character(1:20)), names_to = "dose_num", values_to = "age") %>%
   filter(dose_num == 3) %>% 
   select(Vaccine, age) %>%
   distinct() %>%
-  pivot_wider(names_from = Vaccine, values_from = age) %>%
-  pull(PCV)
+  pivot_wider(names_from = Vaccine, values_from = age) %>% 
+  pull(1)
 
 ## ---------------------------------------------------------------------------------------------------------------------
 ### Co-administration Plot: Dynamic schedule check — clusters based on shared time points
@@ -1581,9 +1382,9 @@ if ("6 weeks" %in% names(coadmin_pairs) & "14 weeks" %in% names(coadmin_pairs)) 
 }
 
 # print the result to confirm rotas are named correctly
-print(coadmin_pairs)
+#print(coadmin_pairs)
 
-message(paste0("Co-administration clusters detected for ", CountryName, ": ", paste(names(coadmin_pairs), collapse = ", ")))
+#message(paste0("Co-administration clusters detected for ", .current_country, ": ", paste(names(coadmin_pairs), collapse = ", ")))
 
 # text labels for each cluster
 coadmin_labels <- purrr::imap_chr(coadmin_pairs, function(vaccines, cluster_name) {
@@ -1593,7 +1394,7 @@ coadmin_labels <- purrr::imap_chr(coadmin_pairs, function(vaccines, cluster_name
   
   intro_text <- if (length(available) > 0) {
     paste0(
-      "According to the official national vaccination schedule for ", CountryName,
+      "According to the official national vaccination schedule for ", .current_country,
       ", the following antigens are recommended for co-administration at the ",
       cluster_name, " visit: ", paste(vaccines, collapse = ", "), ". "
     )
@@ -1642,7 +1443,7 @@ plt_coadmin_list <- purrr::imap(coadmin_pairs, function(vaccines, cluster_name) 
     scale_color_manual(values = setNames(unicef_colors[seq_along(vaccines_in_cluster)], vaccines_in_cluster)) +
     theme_minimal() +
     labs(
-      title = paste0("Admin Coverage of Vaccines Administered at ", cluster_name, " visit, ", CountryName, ", ", min_yr_plots, "–", rev_yr),
+      title = paste0("Admin Coverage of Vaccines Administered at ", cluster_name, " visit, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
       x = "Year", y = "Admin Coverage (%)", color = "Vaccine") +
     theme(
       legend.position  = "bottom",
@@ -1722,7 +1523,7 @@ make_numerator_plot <- function(plot_data, time_point) {
         labs(
           title = paste0(
             "Year-to-Year % Change in Numerator (# Children Vaccinated), ",
-            CountryName, ", ", min_yr_plots, "–", rev_yr,
+            .current_country, ", ", min_yr_plots, "–", rev_yr,
             "\nVaccines Administered at ", time_point, " visit"
           ),
           subtitle = "Insufficient data for year-to-year % change calculation"
@@ -1816,7 +1617,7 @@ make_numerator_plot <- function(plot_data, time_point) {
     labs(
       title = paste0(
         "Year-to-Year % Change in Numerator (# Children Vaccinated), ",
-        CountryName, ", ", min_yr_plots, "–", rev_yr,
+        .current_country, ", ", min_yr_plots, "–", rev_yr,
         "\nVaccines Administered at ", time_point, " visit"
       ),
       subtitle = paste0(
@@ -1868,12 +1669,12 @@ vaccine_map <- c(
 )
 
 # vaccines actually present in this country's wuenic data
-wuenic_vaccines <- unique(wuenic_master$Vaccine)
+wuenic_vaccines <- unique(wuenic_master_current$Vaccine)
 
 # get introduction years per vaccine from wiise_intro
 # wiise_intro has one row per country x vaccine, with year_intro_national
 intro_years <- wiise_intro %>%
-  filter(tolower(iso3c) == tolower(Current_ISO3)) %>%
+  filter(tolower(iso3c) == tolower(.current_iso3c)) %>%
   mutate(mapped_name = coalesce(vaccine_map[vaccine], vaccine)) %>%
   relocate(mapped_name, .after = vaccine_name) %>% 
   filter(!is.na(mapped_name), mapped_name %in% wuenic_vaccines) %>%
@@ -1883,7 +1684,7 @@ intro_years <- wiise_intro %>%
 
 # after building intro_years, override intro_year with the earliest year
 # that admin data actually exists — in case wiise_intro is wrong/mislabeled
-admin_earliest <- wuenic_master %>%
+admin_earliest <- wuenic_master_current %>%
   filter(!is.na(Admin)) %>%
   group_by(Vaccine) %>%
   summarise(earliest_admin = min(Year, na.rm = TRUE), .groups = "drop")
@@ -1904,7 +1705,7 @@ if ("DTP3" %in% intro_years$Vaccine) {
   intro_years <- bind_rows(intro_years, tibble(Vaccine = "DTP1", intro_year = dtp3_year))
 }
 
-# for vaccines in wuenic_master but NOT in wiise schedule at all,
+# for vaccines in wuenic_master_current but NOT in wiise schedule at all,
 # assume they were always available (intro_year = min_yr_plots)
 # so they show red when missing rather than blank
 missing_from_intro <- setdiff(wuenic_vaccines, intro_years$Vaccine)
@@ -1917,8 +1718,8 @@ if (length(missing_from_intro) > 0) {
   )
 }
 
-# build heatmap data — only vaccines in wuenic_master
-heatmap_data_wuenic <- wuenic_master %>%
+# build heatmap data — only vaccines in wuenic_master_current
+heatmap_data_wuenic <- wuenic_master_current %>%
   select(Year, Vaccine, Admin) %>%
   # ensure all year x vaccine combos exist
   complete(Year = min_yr_plots:rev_yr, Vaccine = wuenic_vaccines) %>%
@@ -1946,7 +1747,7 @@ plt_missing_heatmap <- ggplot(heatmap_data_wuenic, aes(x = factor(Year), y = fct
   geom_tile(color = "white", linewidth = 0.2) +
   scale_fill_manual(values   = c("Missing" = "#E2231A", "Present" = "#00833D"), na.value = "white") +
   theme_minimal() +
-  labs(title = paste0("Admin Data Availability Heatmap, ", CountryName, ", ", min_yr_plots, "–", rev_yr),
+  labs(title = paste0("Admin Data Availability Heatmap, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
        x = "Year", y = "Vaccine", fill = "Data Status") +
   theme(
     axis.text.x    = element_text(angle = 45, vjust = 0.5, size = 8),
@@ -1955,3 +1756,4 @@ plt_missing_heatmap <- ggplot(heatmap_data_wuenic, aes(x = factor(Year), y = fct
     plot.title     = element_text(hjust = 0.5, size = 14)
   )
 plt_missing_heatmap
+
