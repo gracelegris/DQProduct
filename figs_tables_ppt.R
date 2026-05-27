@@ -977,175 +977,153 @@ plt_denom_change
 ### Denom Plot 2: Live births (BCG) vs surviving infants (DTP1) over time
 ## ---------------------------------------------------------------------------------------------------------------------
 
-# separate birth and surviving infants data from wuenic_master_current and reshape for plotting
+# Reshape data: UNPD denominators (long format)
 births_vs_si_data <- wuenic_master_current %>%
-  select(Year, Vaccine, ChildrenInTarget) %>%
   filter(Vaccine %in% c("BCG", "DTP1")) %>%
+  select(Year, Vaccine, BirthsUNPD, SurvivingInfantsUNPD)
+
+# UNPD lines: one row per year
+unpd_data <- births_vs_si_data %>%
+  filter(Vaccine == "BCG") %>%
+  select(Year, BirthsUNPD, SurvivingInfantsUNPD) %>%
+  pivot_longer(
+    cols = c(BirthsUNPD, SurvivingInfantsUNPD),
+    names_to  = "target_grp",
+    values_to = "Population"
+  ) %>%
   mutate(target_grp = case_when(
-    Vaccine == "BCG"  ~ "Live Births (BCG)",
-    Vaccine == "DTP1" ~ "Surviving Infants (DTP1)",
-    TRUE ~ NA_character_
+    target_grp == "BirthsUNPD" ~ "Live Births (UNPD)",
+    target_grp == "SurvivingInfantsUNPD" ~ "Surviving Infants (UNPD)"
   ))
 
-bcg_data_available <- births_vs_si_data %>%
-  filter(Vaccine == "BCG", !is.na(ChildrenInTarget)) %>%
-  nrow() > 0
-dtp1_data_available <- births_vs_si_data %>%
-  filter(Vaccine == "DTP1", !is.na(ChildrenInTarget)) %>%
-  nrow() > 0
+# --- Availability checks (now based on UNPD columns) ---
+bcg_unpd_available  <- births_vs_si_data %>%
+  filter(Vaccine == "BCG",  !is.na(BirthsUNPD)) %>% nrow() > 0
+
+si_unpd_available <- births_vs_si_data %>%
+  filter(Vaccine == "BCG",  !is.na(SurvivingInfantsUNPD)) %>% nrow() > 0
+
 bcg_in_schedule <- "BCG" %in% tbl_schedule_r$Vaccine
-availability_footnote <- if (!bcg_data_available && !dtp1_data_available) {
-  "NOTE: No denominator data available for either BCG or DTP1."
-} else if (!bcg_data_available && !bcg_in_schedule) {
-  paste0("NOTE: BCG is not in ", .current_country, "'s current schedule, so there is no denominator data available.")
-} else if(!bcg_data_available && bcg_in_schedule) {
-  "NOTE: No denominator data available for BCG (Live Births)."
-} else if (!dtp1_data_available) {
-  "NOTE: No denominator data available for DTP1 (Surviving Infants)."
+
+availability_footnote <- if (!bcg_unpd_available && !si_unpd_available) {
+  "NOTE: No UNPD denominator data available for Live Births or Surviving Infants."
+} else if (!bcg_unpd_available && !bcg_in_schedule) {
+  paste0("NOTE: BCG is not in ", .current_country, "'s current schedule; no Live Births data available.")
+} else if (!bcg_unpd_available) {
+  "NOTE: No UNPD data available for Live Births."
+} else if (!si_unpd_available) {
+  "NOTE: No UNPD data available for Surviving Infants."
 } else {
   NULL
 }
 
-# set y axis min and max when there is only one data point available
-data_available <- births_vs_si_data %>%
-  filter(!is.na(ChildrenInTarget)) %>%
+# --- Y-axis limits for single data point edge case ---
+data_available <- unpd_data %>%
+  filter(!is.na(Population)) %>%
   nrow()
 
-if(data_available == 1) {
-  single_value <- births_vs_si_data$ChildrenInTarget[!is.na(births_vs_si_data$ChildrenInTarget)][1]
-  
-  # dynamically determine a clean step size based on the magnitude of the value
-  # e.g., if value is 500,000, step is 100,000. If value is 5,000, step is 1,000.
-  step_magnitude <- 10^floor(log10(single_value) - 0.5)
-  
-  # round down the min and round up the max to the nearest clean step
-  y_min <- floor((single_value * 0.5) / step_magnitude) * step_magnitude
-  y_max <- ceiling((single_value * 1.5) / step_magnitude) * step_magnitude
-  
-  # ensure y_min doesn't drop below 0 for target populations
-  y_min <- max(0, y_min) 
+if (data_available == 1) {
+  single_value    <- unpd_data$Population[!is.na(unpd_data$Population)][1]
+  step_magnitude  <- 10^floor(log10(single_value) - 0.5)
+  y_min           <- max(0, floor((single_value * 0.5) / step_magnitude) * step_magnitude)
+  y_max           <- ceiling((single_value * 1.5) / step_magnitude) * step_magnitude
 } else {
   y_min <- NULL
   y_max <- NULL
 }
 
-plt_births_vs_si <- ggplot(births_vs_si_data, aes(x = Year, y = ChildrenInTarget, color = target_grp)) +
+# --- Plot ---
+plt_births_vs_si <- ggplot(unpd_data, aes(x = Year, y = Population, color = target_grp)) +
   geom_line(linewidth = 0.9) +
-  geom_point(size = 2.5) +
-  scale_y_continuous(
-    labels = scales::label_number(scale_cut = scales::cut_short_scale()),
-    limits = if(!is.null(y_min)) c(y_min, y_max) else NULL 
-  ) +
-  scale_x_continuous(breaks = seq(min(births_vs_si_data$Year), max(births_vs_si_data$Year), by = 1)) +
-  scale_color_manual(values = c("Live Births (BCG)" = "#E87722", "Surviving Infants (DTP1)" = "#0083CF")) +
+  geom_point(size = 2) +
+  scale_y_continuous(labels = scales::label_number(scale_cut = scales::cut_short_scale()),
+                     limits = if (!is.null(y_min)) c(y_min, y_max) else NULL) +
+  scale_x_continuous(breaks = seq(min(unpd_data$Year), max(unpd_data$Year), by = 1)) +
+  scale_color_manual(values = c("Live Births (UNPD)" = "#E87722", "Surviving Infants (UNPD)" = "#0083CF")) +
   theme_minimal() +
-  labs(
-    title = paste0("Admin Data: Live Births (BCG) vs Surviving Infants (DTP1) Denominators, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
-    x = "Year", y = "Target Population",
-    color = "Denominator Type",
-    caption = availability_footnote
-  ) +
+  labs(title = paste0("Live Births & Surviving Infants (UNPD) vs Admin Denominators, ",
+                      .current_country, ", ", min_yr_plots, "–", rev_yr),
+       x = "Year", y = "Target Population", color = "Denominator", caption = availability_footnote) +
   theme(
-    legend.position  = "bottom",
-    panel.border     = element_rect(color = "black", fill = NA, linewidth = 0.6),
-    plot.title       = element_text(hjust = 0.5, size = 14),
-    plot.subtitle    = element_text(hjust = 0.5, size = 11),
-    axis.text.x      = element_text(angle = 45, hjust = 1, size = 8),
-    axis.ticks.x     = element_line(color = "black"),
-    axis.ticks.y     = element_line(color = "black"),
-    plot.caption     = element_text(color = "red", size = 12)
+    legend.position = "bottom",
+    panel.border    = element_rect(color = "black", fill = NA, linewidth = 0.6),
+    plot.title      = element_text(hjust = 0.5, size = 14),
+    plot.subtitle   = element_text(hjust = 0.5, size = 11),
+    axis.text.x     = element_text(angle = 45, hjust = 1, size = 8),
+    axis.ticks.x    = element_line(color = "black"),
+    axis.ticks.y    = element_line(color = "black"),
+    plot.caption    = element_text(color = "red", size = 12),
+    grid.minor      = element_blank()
   )
 
 ## ---------------------------------------------------------------------------------------------------------------------
 ### Denom Plot 3: Year-to-year % change for Live Births (BCG) and Surviving Infants (DTP1)
 ## ---------------------------------------------------------------------------------------------------------------------
 
-denom_types_data <- wuenic_master_current %>%
+enom_types_data <- wuenic_master_current %>%
   filter(Vaccine %in% c("BCG", "DTP1")) %>%
-  mutate(DenomType = case_when(
-    Vaccine == "BCG"  ~ "Live Births",
-    Vaccine == "DTP1" ~ "Surviving Infants"
-  )) %>%
+  mutate(DenomType = case_when(Vaccine == "BCG" ~ "Live Births", Vaccine == "DTP1" ~ "Surviving Infants")) %>%
   group_by(DenomType) %>%
   arrange(Year) %>%
   mutate(
-    prev_target = lag(ChildrenInTarget),
-    pct_change_denom = (ChildrenInTarget - prev_target) / prev_target,
+    UNPD_value = case_when(DenomType == "Live Births" ~ BirthsUNPD, DenomType == "Surviving Infants" ~ SurvivingInfantsUNPD),
+    prev_unpd = lag(UNPD_value),
+    pct_change_denom = (UNPD_value - prev_unpd) / prev_unpd,
     flag_denom_change = abs(pct_change_denom) > pct_threshold
   ) %>%
   ungroup()
 
-# Calculate scaling for the secondary axis (raw counts)
 y_limit_dt <- max(abs(denom_types_data$pct_change_denom), na.rm = TRUE)
 if(y_limit_dt == 0 || is.na(y_limit_dt)) y_limit_dt <- 0.1
-
 primary_max_dt <- y_limit_dt
 primary_min_dt <- -y_limit_dt
-sec_max_dt     <- max(denom_types_data$ChildrenInTarget, na.rm = TRUE)
-scale_dt       <- sec_max_dt / (primary_max_dt - primary_min_dt)
-offset_dt      <- sec_max_dt - (scale_dt * primary_max_dt)
+sec_max_dt <- max(denom_types_data$UNPD_value, na.rm = TRUE)
+scale_dt <- sec_max_dt / (primary_max_dt - primary_min_dt)
+offset_dt <- sec_max_dt - (scale_dt * primary_max_dt)
 
-# see if there is enough denominator data available to compute percent change
-denom_data_available <- denom_types_data %>%
-  filter(!is.na(ChildrenInTarget)) %>%
-  nrow() > 1
+denom_data_available <- denom_types_data %>% filter(!is.na(UNPD_value)) %>% nrow() > 1
 
 if(denom_data_available) {
   plt_denom_pct_change <- local({
     ggplot(denom_types_data, aes(x = Year)) +
-    geom_hline(yintercept = 0, color = "black") +
-    geom_hline(yintercept = c(pct_threshold, -pct_threshold), linetype = "dashed", color = "red", alpha = 0.5) +
-    
-    # Bar/Segment for % change
-    geom_segment(aes(x = Year, xend = Year, y = 0, yend = pct_change_denom), color = "grey60") +
-    geom_point(aes(y = pct_change_denom, color = flag_denom_change), size = 3) +
-    
-    # Line for raw population (scaled)
-    geom_line(aes(y = (ChildrenInTarget - offset_dt) / scale_dt, group = DenomType), 
-              color = "#00833D", linewidth = 1, alpha = 0.5) +
-    
-    facet_wrap(~DenomType) +
-    scale_y_continuous(
-      name = "% Change from Previous Year", 
-      limits = c(primary_min_dt, primary_max_dt), 
-      labels = scales::percent_format(),
-      sec.axis = sec_axis(~ . * scale_dt + offset_dt, 
-                          name = "Raw Denominator Count",
-                          labels = scales::label_number(scale_cut = scales::cut_short_scale()))
-    ) +
-    scale_color_manual(values = c("FALSE" = "black", "TRUE" = "red")) +
-    theme_minimal() +
-    theme(
-      legend.position = "none",
-      panel.border       = element_rect(color = "black", fill = NA, linewidth = 0.6),
-      strip.background = element_rect(fill = "#0083CF"),
-      strip.text = element_text(color = "white", face = "bold"),
-      axis.title.y.right = element_text(color = "#00833D"),
-      axis.text.y.right = element_text(color = "#00833D"),
-      axis.ticks.x = element_line(color = "black"),
-      axis.ticks.y = element_line(color = "black"),
-      plot.title = element_text(hjust = 0.5, size = 14),
-      plot.subtitle = element_text(hjust = 0.5, size = 11)
-    ) +
-    labs(
-      title = paste0("Denominator Stability Check, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
-      subtitle = paste0("Line shows raw counts; points show % annual change\n", 
-                        "Red points indicate changes exceeding +/- ", pct_threshold * 100, "%"))
+      geom_hline(yintercept = 0, color = "black") +
+      geom_hline(yintercept = c(pct_threshold, -pct_threshold), linetype = "dashed", color = "red", alpha = 0.5) +
+      geom_segment(aes(x = Year, xend = Year, y = 0, yend = pct_change_denom), color = "grey60") +
+      geom_point(aes(y = pct_change_denom, color = flag_denom_change), size = 3) +
+      geom_line(aes(y = (UNPD_value - offset_dt) / scale_dt, group = DenomType), color = "#00833D", linewidth = 1, alpha = 0.5) +
+      facet_wrap(~DenomType) +
+      scale_y_continuous(
+        name = "% Change from Previous Year",
+        limits = c(primary_min_dt, primary_max_dt),
+        labels = scales::percent_format(),
+        sec.axis = sec_axis(~ . * scale_dt + offset_dt, name = "Raw Denominator Count", labels = scales::label_number(scale_cut = scales::cut_short_scale()))
+      ) +
+      scale_color_manual(values = c("FALSE" = "black", "TRUE" = "red")) +
+      theme_minimal() +
+      theme(
+        legend.position = "none",
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 0.6),
+        strip.background = element_rect(fill = "#0083CF"),
+        strip.text = element_text(color = "white", face = "bold"),
+        axis.title.y.right = element_text(color = "#00833D"),
+        axis.text.y.right = element_text(color = "#00833D"),
+        axis.ticks.x = element_line(color = "black"),
+        axis.ticks.y = element_line(color = "black"),
+        plot.title = element_text(hjust = 0.5, size = 14),
+        plot.subtitle = element_text(hjust = 0.5, size = 11),
+      ) +
+      labs(
+        title = paste0("Denominator Stability Check, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
+        subtitle = paste0("Points show % annual change (UNPD)\nRed points indicate changes exceeding +/- ", pct_threshold * 100, "%")
+      )
   })
 } else {
   plt_denom_pct_change <- local({
     ggplot() +
-    geom_text(aes(x = 1, y = 1, label = "Not enough denominator data to compute % change"), 
-              color = "red", size = 5) +
-    theme_void() +
-    labs(
-      title = paste0("Denominator Stability Check, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
-      subtitle = "Insufficient data for year-to-year % change calculation"
-    ) +
-    theme(
-      plot.title = element_text(hjust = 0.5, size = 14),
-      plot.subtitle = element_text(hjust = 0.5, size = 11)
-    )
+      geom_text(aes(x = 1, y = 1, label = "Not enough denominator data to compute % change"), color = "red", size = 5) +
+      theme_void() +
+      labs(title = paste0("Denominator Stability Check, ", .current_country, ", ", min_yr_plots, "–", rev_yr), subtitle = "Insufficient data for year-to-year % change calculation") +
+      theme(plot.title = element_text(hjust = 0.5, size = 14), plot.subtitle = element_text(hjust = 0.5, size = 11))
   })
 }
 
@@ -1452,7 +1430,8 @@ plt_coadmin_list <- purrr::imap(coadmin_pairs, function(vaccines, cluster_name) 
       panel.border     = element_rect(color = "black", fill = NA, linewidth = 0.6),
       strip.background = element_rect(fill = "#0083CF"),
       strip.text       = element_text(color = "white", face = "bold"),
-      plot.title       = element_text(hjust = 0.5, size = 14)
+      plot.title       = element_text(hjust = 0.5, size = 14),
+      panel.grid.minor = element_blank()
     )
 })
 
