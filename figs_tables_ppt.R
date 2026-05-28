@@ -30,7 +30,7 @@ flag_colors <- c("FALSE" = "black", "TRUE" = "red")
 # ======================================================================================================================
 
 # regional info file
-regional_info <- regional_info %>% filter(iso3c == .current_iso3c)
+regional_info <- regional_info %>% filter(iso3c == toupper(.current_iso3c))
 
 # intro paragraph using regional info df
 intro_paragraph <- paste0(
@@ -460,6 +460,13 @@ plot_data_numerators_all <- wuenic_master_current %>%
   ) %>%
   ungroup()
 
+# ── EARLY EXIT IF NO DATA ─────────────────────────────────────────────────────
+if (nrow(plot_data_numerators_all) == 0) {
+  message("Skipping ", .current_country, ": no numerator data available")
+  plt_perc_change_line <- NULL
+  next
+}
+
 # ── OUTLIER HANDLING ──────────────────────────────────────────────────────────
 outlier_threshold <- 500
 
@@ -499,8 +506,14 @@ vaccines_no_numerator_data <- plot_data_numerators_all %>%
 # ── SCALING (only on vaccines with data) ──────────────────────────────────────
 plot_data_for_scaling <- plot_data_numerators_all %>% filter(Vaccine %in% vaccines_with_numerator_data)
 
-max_doses_num <- max(plot_data_for_scaling$ChildrenVaccinated, na.rm = TRUE)
-max_pct_num   <- max(abs(plot_data_for_scaling$pct_change), na.rm = TRUE)
+# check if there is any numerator data
+if (!is.null(plot_data_for_scaling) && nrow(plot_data_for_scaling) > 0) {
+  max_doses_num <- max(plot_data_for_scaling$ChildrenVaccinated, na.rm = TRUE)
+  max_pct_num   <- max(abs(plot_data_for_scaling$pct_change), na.rm = TRUE)
+} else {
+  max_doses_num <- NA
+  max_pct_num   <- NA
+}
 
 if (is.na(max_pct_num) || max_pct_num == 0) max_pct_num <- 0.1
 
@@ -624,10 +637,15 @@ if (length(vaccines_with_numerator_data) > 0) {
       )
   })
 } else {
-  plt_perc_change_line <- NULL
+  plt_perc_change_line <- ggplot() +
+    annotate("text",
+             x = 0.5, y = 0.5,
+             label = paste0("No vaccines with available numerator data for ", .current_country),
+             color = "red", size = 6, hjust = 0.5, vjust = 0.5) +
+    theme_void()
 }
 
-if(length(vaccines_no_numerator_data) > 0) {
+if (length(vaccines_no_numerator_data) > 0 && !is.null(plt_perc_change_line)) {
   plt_perc_change_line <- plt_perc_change_line +
     labs(caption = paste0("NOTE: Not enough numerator data to calculate percent change for: ", 
                           paste(vaccines_no_numerator_data, collapse = ", "))) +
@@ -977,90 +995,98 @@ plt_denom_change
 ### Denom Plot 2: Live births (BCG) vs surviving infants (DTP1) over time
 ## ---------------------------------------------------------------------------------------------------------------------
 
-# Reshape data: UNPD denominators (long format)
-births_vs_si_data <- wuenic_master_current %>%
-  filter(Vaccine %in% c("BCG", "DTP1")) %>%
-  select(Year, Vaccine, BirthsUNPD, SurvivingInfantsUNPD)
-
-# UNPD lines: one row per year
-unpd_data <- births_vs_si_data %>%
-  filter(Vaccine == "BCG") %>%
-  select(Year, BirthsUNPD, SurvivingInfantsUNPD) %>%
-  pivot_longer(
-    cols = c(BirthsUNPD, SurvivingInfantsUNPD),
-    names_to  = "target_grp",
-    values_to = "Population"
-  ) %>%
-  mutate(target_grp = case_when(
-    target_grp == "BirthsUNPD" ~ "Live Births (UNPD)",
-    target_grp == "SurvivingInfantsUNPD" ~ "Surviving Infants (UNPD)"
-  ))
-
-# --- Availability checks (now based on UNPD columns) ---
-bcg_unpd_available  <- births_vs_si_data %>%
-  filter(Vaccine == "BCG",  !is.na(BirthsUNPD)) %>% nrow() > 0
-
-si_unpd_available <- births_vs_si_data %>%
-  filter(Vaccine == "BCG",  !is.na(SurvivingInfantsUNPD)) %>% nrow() > 0
-
-bcg_in_schedule <- "BCG" %in% tbl_schedule_r$Vaccine
-
-availability_footnote <- if (!bcg_unpd_available && !si_unpd_available) {
-  "NOTE: No UNPD denominator data available for Live Births or Surviving Infants."
-} else if (!bcg_unpd_available && !bcg_in_schedule) {
-  paste0("NOTE: BCG is not in ", .current_country, "'s current schedule; no Live Births data available.")
-} else if (!bcg_unpd_available) {
-  "NOTE: No UNPD data available for Live Births."
-} else if (!si_unpd_available) {
-  "NOTE: No UNPD data available for Surviving Infants."
-} else {
-  NULL
-}
-
-# --- Y-axis limits for single data point edge case ---
-data_available <- unpd_data %>%
-  filter(!is.na(Population)) %>%
-  nrow()
-
-if (data_available == 1) {
-  single_value    <- unpd_data$Population[!is.na(unpd_data$Population)][1]
-  step_magnitude  <- 10^floor(log10(single_value) - 0.5)
-  y_min           <- max(0, floor((single_value * 0.5) / step_magnitude) * step_magnitude)
-  y_max           <- ceiling((single_value * 1.5) / step_magnitude) * step_magnitude
-} else {
-  y_min <- NULL
-  y_max <- NULL
-}
-
-# --- Plot ---
-plt_births_vs_si <- ggplot(unpd_data, aes(x = Year, y = Population, color = target_grp)) +
-  geom_line(linewidth = 0.9) +
-  geom_point(size = 2) +
-  scale_y_continuous(labels = scales::label_number(scale_cut = scales::cut_short_scale()),
-                     limits = if (!is.null(y_min)) c(y_min, y_max) else NULL) +
-  scale_x_continuous(breaks = seq(min(unpd_data$Year), max(unpd_data$Year), by = 1)) +
-  scale_color_manual(values = c("Live Births (UNPD)" = "#E87722", "Surviving Infants (UNPD)" = "#0083CF")) +
-  theme_minimal() +
-  labs(title = paste0("Live Births & Surviving Infants (UNPD) vs Admin Denominators, ",
-                      .current_country, ", ", min_yr_plots, "–", rev_yr),
-       x = "Year", y = "Target Population", color = "Denominator", caption = availability_footnote) +
-  theme(
-    legend.position = "bottom",
-    panel.border    = element_rect(color = "black", fill = NA, linewidth = 0.6),
-    plot.title      = element_text(hjust = 0.5, size = 14),
-    plot.subtitle   = element_text(hjust = 0.5, size = 11),
-    axis.text.x     = element_text(angle = 45, hjust = 1, size = 8),
-    axis.ticks.x    = element_line(color = "black"),
-    axis.ticks.y    = element_line(color = "black"),
-    plot.caption    = element_text(color = "red", size = 12),
-    grid.minor      = element_blank()
-  )
+# # Reshape data: UNPD denominators (long format)
+# births_vs_si_data <- wuenic_master_current %>%
+#   filter(Vaccine %in% c("BCG", "DTP1")) %>%
+#   select(Year, Vaccine, BirthsUNPD, SurvivingInfantsUNPD)
+# 
+# # UNPD lines: one row per year
+# if(nrow(births_vs_si_data) == 0) {
+#   message("Skipping ", .current_country, ": no UNPD denominator data available for BCG or DTP1")
+#   plt_births_vs_si <- NULL
+# } else {
+#   unpd_data <- births_vs_si_data %>%
+#     select(Year, Vaccine, BirthsUNPD, SurvivingInfantsUNPD) %>%
+#     pivot_longer(
+#       cols = c(BirthsUNPD, SurvivingInfantsUNPD),
+#       names_to  = "target_grp",
+#       values_to = "Population"
+#     ) %>%
+#     mutate(target_grp = case_when(
+#       target_grp == "BirthsUNPD" ~ "Live Births (UNPD)",
+#       target_grp == "SurvivingInfantsUNPD" ~ "Surviving Infants (UNPD)"
+#     )) %>% 
+#     filter(
+#       (Vaccine == "BCG" & target_grp == "Live Births (UNPD)") |
+#         (Vaccine == "DTP1" & target_grp == "Surviving Infants (UNPD)")
+#     )
+# }
+# 
+# # --- Availability checks (now based on UNPD columns) ---
+# bcg_unpd_available  <- births_vs_si_data %>%
+#   filter(Vaccine == "BCG",  !is.na(BirthsUNPD)) %>% nrow() > 0
+# 
+# si_unpd_available <- births_vs_si_data %>%
+#   filter(Vaccine == "DTP1",  !is.na(SurvivingInfantsUNPD)) %>% nrow() > 0
+# 
+# bcg_in_schedule <- "BCG" %in% tbl_schedule_r$Vaccine
+# 
+# availability_footnote <- if (!bcg_unpd_available && !si_unpd_available) {
+#   "NOTE: No UNPD denominator data available for Live Births or Surviving Infants."
+# } else if (!bcg_unpd_available && !bcg_in_schedule) {
+#   paste0("NOTE: BCG is not in ", .current_country, "'s current schedule; no Live Births data available.")
+# } else if (!bcg_unpd_available) {
+#   "NOTE: No UNPD data available for Live Births."
+# } else if (!si_unpd_available) {
+#   "NOTE: No UNPD data available for Surviving Infants."
+# } else {
+#   NULL
+# }
+# 
+# # --- Y-axis limits for single data point edge case ---
+# data_available <- unpd_data %>%
+#   filter(!is.na(Population)) %>%
+#   nrow()
+# 
+# if (data_available == 1) {
+#   single_value    <- unpd_data$Population[!is.na(unpd_data$Population)][1]
+#   step_magnitude  <- 10^floor(log10(single_value) - 0.5)
+#   y_min           <- max(0, floor((single_value * 0.5) / step_magnitude) * step_magnitude)
+#   y_max           <- ceiling((single_value * 1.5) / step_magnitude) * step_magnitude
+# } else {
+#   y_min <- NULL
+#   y_max <- NULL
+# }
+# 
+# # --- Plot ---
+# plt_births_vs_si <- ggplot(unpd_data, aes(x = Year, y = Population, color = target_grp)) +
+#   geom_line(linewidth = 0.9) +
+#   geom_point(size = 2) +
+#   scale_y_continuous(labels = scales::label_number(scale_cut = scales::cut_short_scale()),
+#                      limits = if (!is.null(y_min)) c(y_min, y_max) else NULL) +
+#   scale_x_continuous(breaks = seq(min(unpd_data$Year), max(unpd_data$Year), by = 1)) +
+#   scale_color_manual(values = c("Live Births (UNPD)" = "#E87722", "Surviving Infants (UNPD)" = "#0083CF")) +
+#   theme_minimal() +
+#   labs(title = paste0("Live Births & Surviving Infants (UNPD) vs Admin Denominators, ",
+#                       .current_country, ", ", min_yr_plots, "–", rev_yr),
+#        x = "Year", y = "Target Population", color = "Denominator", caption = availability_footnote) +
+#   theme(
+#     legend.position = "bottom",
+#     panel.border    = element_rect(color = "black", fill = NA, linewidth = 0.6),
+#     plot.title      = element_text(hjust = 0.5, size = 14),
+#     plot.subtitle   = element_text(hjust = 0.5, size = 11),
+#     axis.text.x     = element_text(angle = 45, hjust = 1, size = 8),
+#     axis.ticks.x    = element_line(color = "black"),
+#     axis.ticks.y    = element_line(color = "black"),
+#     plot.caption    = element_text(color = "red", size = 12),
+#     panel.grid.minor.x = element_blank()
+#   )
 
 ## ---------------------------------------------------------------------------------------------------------------------
 ### Denom Plot 3: Year-to-year % change for Live Births (BCG) and Surviving Infants (DTP1)
 ## ---------------------------------------------------------------------------------------------------------------------
 
-enom_types_data <- wuenic_master_current %>%
+denom_types_data <- wuenic_master_current %>%
   filter(Vaccine %in% c("BCG", "DTP1")) %>%
   mutate(DenomType = case_when(Vaccine == "BCG" ~ "Live Births", Vaccine == "DTP1" ~ "Surviving Infants")) %>%
   group_by(DenomType) %>%

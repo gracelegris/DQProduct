@@ -4,7 +4,6 @@
 # ==========================================================================================================================================
 
 options(scipen = 999)
-x <- .current_iso3c
 
 ## ── DATA LOADING ─────────────────────────────────────────────────────────────
 
@@ -298,7 +297,7 @@ func_slide_v_txt(paste0(
 func_slide_v(dml_plt_births_vs_si)
 func_slide_v_txt(paste0(
   "Comparison of live births (BCG denominator) and surviving infants (DTP1 denominator) ",
-  "over time, ", min_yr_plots, "–", rev_yr, ". Large or persistent divergence may indicate a denominator issue."))
+  "over time, ", min_yr_plots, "–", rev_yr))
 
 # % change in BCG and DTP1 denominators
 func_slide_v(dml_plt_denom_pct_change)
@@ -486,7 +485,7 @@ if (nrow(comments_summary) > 0) {
 }
 
 # ── SAVE ─────────────────────────────────────────────────────────────────────
-folder_path <- str_glue("{dqfolder}/outputs/all_countries")
+folder_path <- file.path(directory, type, "outputs/all_countries")
 dir.create(folder_path, recursive = TRUE, showWarnings = FALSE)
 
 print(doc, target = file.path(folder_path, paste0(.current_country, "_DQ.pptx")))

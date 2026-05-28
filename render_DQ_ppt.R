@@ -3,6 +3,8 @@
 # Author: Grace Legris, glegris@unicef.org
 # ==========================================================================================================================================
 
+type <- "draft"
+
 ## ─────────────────────────────────────────────────────────────────────────────
 source("user_profiles.R")
 #source("01_setup.R") 
@@ -15,6 +17,7 @@ source(paste0(SubnatFuncDir, "/data_quality_funcs.R"))
 
 ## ── PATHS ───────────────────────────────────────────────────────────────────
 RevDir <- file.path("/Users/UNICEF/Library/CloudStorage/OneDrive-SharedLibraries-UNICEF/Health-HIV Data & Analytics - 2025 rev")
+directory <- file.path("/Users/UNICEF/Library/CloudStorage/OneDrive-SharedLibraries-UNICEF/Health-HIV Data & Analytics - 2025 rev/unicef-products")
 utils      <- str_glue(RevDir, "/unicef-products/{type}/utils")
 wrkfolder  <- str_glue(RevDir, "/unicef-products/{type}/country-specific-charts")
 wiisefolder <- str_glue(RevDir, "/unicef-products/{type}/wiise-outputs")
@@ -24,7 +27,6 @@ DummyDataDir <- str_glue(RevDir, "/wuenic_master/dummy")
 ppt_script_path <- file.path(dqfolder, "DQ_ppt_formatted.R")
 
 ## ── PARAMETERS ───────────────────────────────────────────────────────────────
-x             <- tolower(.current_iso3c)
 pct_threshold <- 0.10
 second_pct_threshold <- 0.30
 rev_yr        <- 2025
@@ -32,7 +34,6 @@ hpv_rev_yr    <- 2024
 wpp_rev_yr    <- 2024
 min_yr_plots  <- 2000
 n_years_comparison_plot <- 5 # years to display in the wuenic vs. official vs. admin coverage heatmap
-type          <- "dummy"
 language <- "en"
 
 ## ── COLORS ──────────────────────────────────────────────────────────────────
@@ -62,14 +63,15 @@ for (current_country in countries) {
   # get iso3c for this country
   wuenic_master <- read.csv(file.path(DummyDataDir, "wuenic-master_2025rev.csv"))
   .current_iso3c <- wuenic_master %>% filter(Country == current_country) %>% pull(ISOCountryCode) %>% unique()
+  x <- tolower(.current_iso3c)
   
   # execute DQ_ppt_formatted.R
   tryCatch({
-    suppressWarnings(
-      suppressMessages(
+    #suppressWarnings(
+      #suppressMessages(
         source(ppt_script_path, local = FALSE)
-      )
-    )
+      #)
+    #)
     cat("✅ Successfully generated PPT for:", current_country, "\n\n")
   }, error = function(e) {
     cat("ERROR processing:", current_country, "\n")
