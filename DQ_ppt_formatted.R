@@ -166,7 +166,7 @@ if (nrow(tbl_schedule_r) > 0 && ncol(tbl_schedule_r) > 0) {
                  location = ph_location(left = 0.6, top = 0.6, width = 8, height = 1))
   doc <- ph_with(x = doc, value = tbl_schedule,
                  location = ph_location(left = 0.6, top = 1.5, width = total_width_sched, height = 5))
-  func_slide_v_txt(paste0("Vaccine schedule as reported to WIISE. Latest update: ", schedule_year, "."))
+  func_slide_v_txt(paste0("Vaccine schedule from ", country_sched_year, " (most recent for ", CountryName, "), as reported to WIISE."))
 }
 
 # vaccine introductions table

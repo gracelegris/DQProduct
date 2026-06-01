@@ -14,11 +14,10 @@ source(paste0(SubnatFuncDir, "/data_quality_funcs.R"))
 # regional info file
 regional_info <- read_csv(file.path(DummyUtils, "regional-groups_2026-release.csv"))
 
-# read in wiise schedule
-wiise_schedule <- read_excel(str_glue("{wiisefolder}/output/wiise-schedule-dta_{rev_yr}rev.xlsx"))
+# read in wiise schedule (new version that has the most recent year of schedule data for each country, not just rev_yr)
+wiise_schedule <- read_excel(str_glue("{wiisefolder}/output/wiise-schedule-dta_mostrecent.xlsx"))
 
 # WIISE schedule and introductions
-wiise_schedule <- read_excel(str_glue("{wiisefolder}/output/wiise-schedule-dta_{rev_yr}rev.xlsx"))
 wiise_intro <- read_excel(str_glue("{wiisefolder}/output/wiise-intro-dta_{rev_yr}rev.xlsx"))
 wiise_stockouts <- read_excel(str_glue("{wiisefolder}/output/wiise-stock-dta_{rev_yr}rev.xlsx"))
 

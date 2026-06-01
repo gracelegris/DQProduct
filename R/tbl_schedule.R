@@ -151,3 +151,11 @@ total_width_sched <- sum(col_widths)
 tbl_schedule <- tbl
 }
 
+# get year schedule is from for this country
+country_sched_year <- wiise_schedule %>%
+  filter(iso3c == x) %>%
+  pull(year) %>%
+  unique() %>%
+  sort(decreasing = TRUE) %>%
+  first()
+

@@ -503,13 +503,27 @@ vaccines_no_numerator_data <- plot_data_numerators_all %>%
   filter(!Vaccine %in% vaccines_with_numerator_data) %>%
   pull(Vaccine)
 
+# vaccines with numerator data but no consecutive years of data (cannot calculate year-to-year change)
+vaccines_no_consecutive_data <- plot_data_numerators_all %>%
+  filter(Vaccine %in% vaccines_with_numerator_data) %>%
+  arrange(Vaccine, Year) %>%
+  group_by(Vaccine) %>%
+  summarise(
+    has_consecutive = any(!is.na(ChildrenVaccinated) & !is.na(lag(ChildrenVaccinated))),
+    .groups = "drop"
+  ) %>%
+  filter(!has_consecutive) %>%
+  pull(Vaccine)
+
 # ── SCALING (only on vaccines with data) ──────────────────────────────────────
 plot_data_for_scaling <- plot_data_numerators_all %>% filter(Vaccine %in% vaccines_with_numerator_data)
 
-# check if there is any numerator data
+# check if there is any numerator & percent change data
 if (!is.null(plot_data_for_scaling) && nrow(plot_data_for_scaling) > 0) {
   max_doses_num <- max(plot_data_for_scaling$ChildrenVaccinated, na.rm = TRUE)
-  max_pct_num   <- max(abs(plot_data_for_scaling$pct_change), na.rm = TRUE)
+  
+  pct_vals <- plot_data_for_scaling$pct_change
+  max_pct_num <- if (all(is.na(pct_vals))) NA else max(abs(pct_vals), na.rm = TRUE)
 } else {
   max_doses_num <- NA
   max_pct_num   <- NA
@@ -645,13 +659,27 @@ if (length(vaccines_with_numerator_data) > 0) {
     theme_void()
 }
 
-if (length(vaccines_no_numerator_data) > 0 && !is.null(plt_perc_change_line)) {
-  plt_perc_change_line <- plt_perc_change_line +
-    labs(caption = paste0("NOTE: Not enough numerator data to calculate percent change for: ", 
-                          paste(vaccines_no_numerator_data, collapse = ", "))) +
-    theme(
-      plot.caption = element_text(color = "red", size = 12)
+# add caption for vaccines with no numerator data or insufficient consecutive data to calculate percent change
+if (!is.null(plt_perc_change_line)) {
+  caption_parts <- c()
+  if (length(vaccines_no_numerator_data) > 0) {
+    caption_parts <- c(caption_parts,
+                       paste0("No numerator data: ", paste(vaccines_no_numerator_data, collapse = ", "))
     )
+  }
+  if (length(vaccines_no_consecutive_data) > 0) {
+    caption_parts <- c(caption_parts,
+                       paste0("Numerator data exists but no consecutive years to calculate percent change: ",
+                              paste(vaccines_no_consecutive_data, collapse = ", "))
+    )
+  }
+  if (length(caption_parts) > 0) {
+    plt_perc_change_line <- plt_perc_change_line +
+      labs(caption = paste0("NOTE: ", paste(caption_parts, collapse = "\n"))) +
+      theme(
+        plot.caption = element_text(color = "red", size = 12)
+      )
+  }
 }
 plt_perc_change_line
 

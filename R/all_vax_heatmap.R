@@ -3,6 +3,7 @@
 
 CountryName <- .current_country
 wuenic_master <- wuenic_master_current
+wuenic_stockouts <- wuenic_stockouts_master %>% filter(iso3c == toupper(x))
 
 ## prep data :: heatmap ----
 df <- wuenic_master %>%
@@ -11,7 +12,7 @@ df <- wuenic_master %>%
 
 # join on any stockouts
 df <- df %>%
-  left_join(wuenic_stockouts) %>%
+  left_join(wuenic_stockouts, by = c("vaccine", "year")) %>%
   distinct() %>%
   mutate(coverage_lbl = case_when(any_stockout == 1 ~ str_glue("{as.character(coverage)}*"),
                                   TRUE ~ as.character(coverage)))
