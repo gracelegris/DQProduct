@@ -3,7 +3,7 @@
 # Author: Grace Legris, glegris@unicef.org
 # ==========================================================================================================================================
 
-type <- "draft"
+type <- "dummy"
 
 ## ─────────────────────────────────────────────────────────────────────────────
 source("user_profiles.R")
@@ -14,6 +14,12 @@ source(file.path(PrjDir, "R/funcs.R"))
 # data cleaning functions from subnational folder
 source(paste0(SubnatFuncDir, "/user_functions_outliers.R"))
 source(paste0(SubnatFuncDir, "/data_quality_funcs.R"))
+
+# source functions
+source(file.path(dqfolder, "R/label_vals.R"))
+source(file.path(dqfolder, "R/funcs.R"))
+source(str_glue("{utils}/R/slide_general_funcs.R"))    # func_slide_v, func_slide_bb, etc.
+source(str_glue("{utils}/R/slide_production_funcs.R")) # func_slide_v_txt, func_slide_v_tlm, etc.
 
 ## ── PATHS ───────────────────────────────────────────────────────────────────
 RevDir <- file.path("/Users/UNICEF/Library/CloudStorage/OneDrive-SharedLibraries-UNICEF/Health-HIV Data & Analytics - 2025 rev")
@@ -74,7 +80,7 @@ for (current_country in countries) {
     #)
     cat("✅ Successfully generated PPT for:", current_country, "\n\n")
   }, error = function(e) {
-    cat("ERROR processing:", current_country, "\n")
+    cat("❌ ERROR processing:", current_country, "\n")
     message(e)
   })
 }

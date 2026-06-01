@@ -486,6 +486,7 @@ if (nrow(comments_summary) > 0) {
 
 # ── SAVE ─────────────────────────────────────────────────────────────────────
 folder_path <- file.path(directory, type, "outputs/all_countries")
+#folder_path <- file.path("/Users/UNICEF/Desktop")
 dir.create(folder_path, recursive = TRUE, showWarnings = FALSE)
 
 print(doc, target = file.path(folder_path, paste0(.current_country, "_DQ.pptx")))
