@@ -79,6 +79,20 @@ source(file.path(PrjDir, "R/tbl_stock.R"))
 # ── dq plots from figs_tables_ppt.R script ─────────────────────────────
 source(file.path(PrjDir, "figs_tables_ppt.R"), echo = FALSE, print.eval = FALSE)
 
+# intro paragraph
+intro_paragraph <- paste0(
+  regional_info$country, " is located in ", str_to_title(regional_info$un_region),
+  ", within the UNICEF ", toupper(regional_info$region_unicef_ops), " region.",
+  if_else(regional_info$region_ldc    == "ldc",          " It is classified as a least developed country (LDC).", ""),
+  if_else(regional_info$region_lmic   == "lmic",         " It is a low- or middle-income country (LMIC).", ""),
+  if_else(regional_info$fragility     == "conflict",      " The country is classified as a fragile and conflict-affected state.", ""),
+  if_else(regional_info$gavi          == "gavi",          " It is eligible for Gavi support.", ""),
+  if_else(regional_info$region_imm_sp_priority == "imm_sp_priority",
+          paste0(" ", regional_info$country, " is an immunization special priority country."), ""),
+  if_else(regional_info$unaids_highimpact == "hiimpact",  " It is a UNAIDS high-impact country.", ""),
+  if_else(regional_info$big_forty     == "big_forty",     " It is one of the Big 40 priority countries for immunization.", "")
+)
+
 ## ── CONVERT PLOTS TO EDITABLE DML ───────────────────────────────────────────
 plot_names     <- ls(pattern = "^plt_")
 ggplot_objects <- mget(plot_names, envir = .GlobalEnv)
@@ -92,7 +106,7 @@ for (name in names(ggplot_objects)) {
 }
 
 ## ── BUILD POWERPOINT ─────────────────────────────────────────────────────────
-doc <- read_pptx(str_glue("{utils}/intervention_analysis_template.pptx"))
+doc <- read_pptx(str_glue("{utils}/region-specific-blank-slides copy.pptx"))
 
 slide_title <- .current_country
 rect <- rectGrob(gp = gpar(fill = "black", col = NA)) # top-line message underline
@@ -121,9 +135,6 @@ doc <- remove_slide(doc, index = 1) # remove the blank first slide in the templa
 # ── INTRO SLIDE (wuenic info) ─────────────────────────────────────────────────
 #doc <- add_slide(doc, layout = "intro_slide", master = "Office Theme")
 
-# ── INTRO TO REPORT SLIDE ─────────────────────────────────────────────────────
-doc <- add_slide(doc, layout = "report_introduction", master = "Office Theme")
-
 # ── EJRF INFO-- ───────────────────────────────────────────────────────────────
 doc <- add_slide(doc, layout = "1_intro_slide", master = "Office Theme")
 
@@ -139,6 +150,9 @@ doc <- add_slide(doc, layout = "definitions", master = "Office Theme")
 #     fp_p = fp_par(text.align = "left"))),
 #   location = ph_location("body", left = 0.57, top = 1.5, width = 12.2, height = 4, bg = "#203864"))
 
+# ── SECTION DIVIDER: SCHEDULE & STOCKOUTS ────────────────────────────────────
+func_slide_bb("Schedule & Stockouts")
+
 # vaccine schedule table
 schedule_year <- wiise_schedule %>% 
   filter(iso3c == x) %>% 
@@ -147,82 +161,25 @@ schedule_year <- wiise_schedule %>%
 if (nrow(tbl_schedule_r) > 0 && ncol(tbl_schedule_r) > 0) {
   doc <- add_slide(doc, layout = "data_1", master = "Office Theme")
   doc <- ph_with(doc,
-                 value = fpar(ftext(paste0("Vaccine Schedule, ", current_country),
+                 value = fpar(ftext("Vaccine Schedule",
                                     prop = fp_text(font.size = 28, color = "black", font.family = "Calibri"))),
                  location = ph_location(left = 0.6, top = 0.6, width = 8, height = 1))
   doc <- ph_with(x = doc, value = tbl_schedule,
                  location = ph_location(left = 0.6, top = 1.5, width = total_width_sched, height = 5))
-  txt_schedule <- paste0("Vaccine schedule from ", country_sched_year, " (most recent for ", CountryName, "), as reported to WIISE.")
-  func_slide_v_txt(txt_schedule)
+  func_slide_v_txt(paste0("Vaccine schedule from ", country_sched_year, " (most recent for ", CountryName, "), as reported to WIISE."))
 }
 
-# ── SECTION DIVIDER: COVERAGE TRENDS BY SOURCE ───────────────────────────────
-func_slide_bb("Coverage Comparison Between WUENIC, Admin, and Official Estimates")
-
-# summary table: coverage by source
-func_slide_v(dml_plt_summary_table)
-txt_summary_table <- paste0(
-  "Coverage by vaccine and data source (WHO/UNICEF, Admin, Official) for the most recent ",
-  n_years_comparison_plot, " years.")
-func_slide_v_txt(txt_summary_table)
-
-# coverage trends by source (comparison to who/unicef coverage)
-func_slide_v(dml_plt_diff_table)
-txt_diff_table <- paste0(
-  "Difference in percentage points between administrative, official, and survey coverage and WHO/UNICEF estimates (e.g., Admin - WUENIC) for the most recent ", 
-  n_years_comparison_plot, " years.")
-func_slide_v_txt(txt_diff_table)
-
-# all vaccines — line chart
-func_slide_v(dml_plt_all_vax_line)
-txt_vax_line <- paste0(
-  "Time-series of WHO/UNICEF estimates, administrative coverage, official government estimates, ",
-  "and survey data by vaccine, ", min_yr_plots, "–", rev_yr, ".")
-func_slide_v_txt(txt_vax_line)
-
-# DTP1, DTP3, MCV1 — line chart
-func_slide_v(dml_plt_selected_vax_line)
-txt_three_lines <- paste0("Coverage trends for DTP1, DTP3, and MCV1 by data source, ", min_yr_plots, "–", rev_yr, ".")
-func_slide_v_txt(txt_three_lines)
-
-# admin vs WHO/UNICEF (first pct change threshold)
-func_slide_v(dml_plt_admin_wuenic_1)
-txt_admin_wuenic <- paste0("Comparison of administrative coverage and WHO/UNICEF estimates by vaccine. ",
-                           "Red lines indicate gaps exceeding ±", pct_threshold * 100, " percentage points.")
-func_slide_v_txt(txt_admin_wuenic)
-
-# admin vs WHO/UNICEF (second pct change threshold)
-func_slide_v(dml_plt_admin_wuenic_2)
-txt_admin_wuenic2 <- paste0("Comparison of administrative coverage and WHO/UNICEF estimates by vaccine. ",
-                            "Red lines indicate gaps exceeding ±", second_pct_threshold * 100, " percentage points.")
-func_slide_v_txt(txt_admin_wuenic2)
-
-# admin vs official
-func_slide_v(dml_plt_admin_vs_official)
-txt_admin_official <- paste0("Comparison of administrative coverage and official government estimates. ",
-                             "Red lines indicate gaps exceeding ±", pct_threshold * 100, " percentage points.")
-func_slide_v_txt(txt_admin_official)
-
-# ── SECTION DIVIDER: ADMIN DATA FLAGS ────────────────────────────────────────
-func_slide_bb("Admin Coverage Flags")
-
-# ── THRESHOLD EXPLANATION ─────────────────────────────────────────────────────
-func_slide_bb("this is why we use the 10% threshold..")
-
-# all vaccines — flag chart
-func_slide_v(dml_plt_coverage_flags)
-txt_cov_flags <- paste0(
-  "Admin coverage flagged where values exceed 100% (orange) or change by more than ±",
-  pct_threshold * 100, " percentage points from the previous year (red), ", min_yr_plots, "–", rev_yr, ".")
-func_slide_v_txt(txt_cov_flags)
-
-# DTP1, DTP3, MCV1 — flag chart
-func_slide_v(dml_plt_selected_coverage_flags)
-txt_three_flags <- paste0("Same flag logic applied to DTP1, DTP3, and MCV1 only, ", min_yr_plots, "–", rev_yr, ".")
-func_slide_v_txt(txt_three_flags)
-
-# ── SECTION DIVIDER: NUMERATOR CHECKS ────────────────────────────────────────
-func_slide_bb("Numerator Checks")
+# vaccine introductions table
+if (!no_data(tbl_intro_r) && nrow(tbl_intro_r) > 0 && ncol(tbl_intro_r) > 0) {
+  doc <- add_slide(doc, layout = "data_1", master = "Office Theme")
+  doc <- ph_with(doc,
+                 value = fpar(ftext("Vaccine Introductions",
+                                    prop = fp_text(font.size = 28, color = "black", font.family = "Calibri"))),
+                 location = ph_location(left = 0.6, top = 0.6, width = 8, height = 1))
+  doc <- ph_with(x = doc, value = tbl_intro,
+                 location = ph_location(left = 0.6, top = 1.5, width = 10, height = 5))
+  func_slide_v_txt("Year in which each vaccine was introduced nationally, partially, for risk groups, or risk areas.")
+}
 
 # stockout table
 if (nrow(tbl_stock_r) > 0 && ncol(tbl_stock_r) > 0) {
@@ -233,29 +190,96 @@ if (nrow(tbl_stock_r) > 0 && ncol(tbl_stock_r) > 0) {
                  location = ph_location(left = 0.6, top = 0.6, width = 8, height = 1))
   doc <- ph_with(x = doc, value = tbl_stock,
                  location = ph_location(left = 0.6, top = 1.5, width = 10, height = 5))
-  txt_stockout_table <- "Years in which a national or subnational vaccine stockout was recorded.\n\n This table provides context for interpreting the numerator and denominator trends and flags in the following slides, as stockouts may contribute to drops in coverage or data quality issues."
-  func_slide_v_txt(txt_stockout_table)
+  func_slide_v_txt("Years in which a national or subnational vaccine stockout was recorded.")
 }
 
-# all numerators line plot
-func_slide_v(dml_plt_all_numerators)
-txt_all_numerators <- "Number of children vaccinated by vaccine and year."
-func_slide_v_txt(txt_all_numerators)
+# ── SECTION DIVIDER: COVERAGE OVERVIEW ───────────────────────────────────────
+func_slide_bb("Coverage Overview")
+
+# WUENIC coverage heatmap
+min_yr <- min(df$year)
+max_yr <- max(df$year)
+func_slide_v(dml_plt_all_vax_heatmap)
+func_slide_v_txt(paste0("WHO/UNICEF coverage estimates across all vaccines, ", min_yr, "–", max_yr, ".",
+                        " Blank cells indicate years prior to vaccine introduction."))
+
+# summary table: coverage by source
+func_slide_v(dml_plt_summary_table)
+func_slide_v_txt(paste0(
+  "Coverage by vaccine and data source (WHO/UNICEF, Admin, Official) for the most recent ",
+  n_years_comparison_plot, " years. Colour scale: red (<60%) to green (≥90%). Missing cells shown in grey. Blank cells indicate years prior to vaccine introduction."))
+
+# ── SECTION DIVIDER: COVERAGE TRENDS BY SOURCE ───────────────────────────────
+func_slide_bb("Coverage Trends by Source")
+
+# all vaccines — line chart
+func_slide_v(dml_plt_all_vax_line)
+func_slide_v_txt(paste0(
+  "Time-series of WHO/UNICEF estimates, administrative coverage, official government estimates, ",
+  "and survey data by vaccine, ", min_yr_plots, "–", rev_yr, "."))
+
+# DTP1, DTP3, MCV1 — line chart
+func_slide_v(dml_plt_selected_vax_line)
+func_slide_v_txt(paste0(
+  "Coverage trends for DTP1, DTP3, and MCV1 by data source, ", min_yr_plots, "–", rev_yr, "."))
+
+# ── SECTION DIVIDER: ADMIN DATA FLAGS ────────────────────────────────────────
+func_slide_bb("Admin Coverage Flags")
+
+# ── THRESHOLD EXPLANATION ─────────────────────────────────────────────────────
+func_slide_bb("this is why we use the 10% threshold..")
+
+# all vaccines — flag chart
+func_slide_v(dml_plt_coverage_flags)
+func_slide_v_txt(paste0(
+  "Admin coverage flagged where values exceed 100% (orange) or change by more than ±",
+  pct_threshold * 100, " percentage points from the previous year (red), ", min_yr_plots, "–", rev_yr, "."))
+
+# DTP1, DTP3, MCV1 — flag chart
+func_slide_v(dml_plt_selected_coverage_flags)
+func_slide_v_txt(paste0(
+  "Same flag logic applied to DTP1, DTP3, and MCV1 only, ", min_yr_plots, "–", rev_yr, "."))
+
+# ── SECTION DIVIDER: ADMIN VS ESTIMATES ──────────────────────────────────────
+func_slide_bb("Admin vs. Estimates")
+
+# admin vs WHO/UNICEF (first pct change threshold)
+func_slide_v(dml_plt_admin_vs_wuenic)
+func_slide_v_txt(paste0(
+  "Comparison of administrative coverage and WHO/UNICEF estimates by vaccine. ",
+  "Red lines indicate gaps exceeding ±", pct_threshold * 100, " percentage points."))
+
+# admin vs WHO/UNICEF (second pct change threshold)
+func_slide_v(dml_plt_admin_vs_wuenic2)
+func_slide_v_txt(paste0(
+  "Comparison of administrative coverage and WHO/UNICEF estimates by vaccine. ",
+  "Red lines indicate gaps exceeding ±", second_pct_threshold * 100, " percentage points."))
+
+# admin vs official
+func_slide_v(dml_plt_admin_vs_official)
+func_slide_v_txt(paste0(
+  "Comparison of administrative coverage and official government estimates. ",
+  "Red lines indicate gaps exceeding ±", pct_threshold * 100, " percentage points."))
+
+# ── SECTION DIVIDER: NUMERATOR CHECKS ────────────────────────────────────────
+func_slide_bb("Numerator Checks")
 
 # year-to-year % change in vaccinated children (all vaccines)
 func_slide_v(dml_plt_perc_change_line)
-txt_numerator_line <- paste0("Percent change from previous year in the number of children vaccinated (numerator) by vaccine. ",
-                             "Red and orange points flag changes exceeding ± 10pp and ± 5pp, respectively. Blue line shows raw counts on the secondary axis. ",
-                             "Orange shading indicates a vaccine stockout in that year. \n\n", outlier_subtitle)
-func_slide_v_txt(txt_numerator_line)
+func_slide_v_txt(paste0(
+  "Year-to-year percentage change in the number of children vaccinated (numerator) by vaccine. ",
+  "Red points flag changes exceeding ±", pct_threshold * 100,
+  "%. Green line shows raw counts on the secondary axis. ",
+  "Orange shading indicates a vaccine stockout in that year. \n\n", outlier_subtitle))
 
 for (cluster_name in names(plt_numerator_list)) {
   
   dml_plt <- rvg::dml(ggobj = plt_numerator_list[[cluster_name]], editable = TRUE)
   func_slide_v(dml_plt)
-  txt_admin_cov_visit <- paste0("Admin coverage of vaccines co-administered at the ", cluster_name, " visit ",
-                                "per the national schedule. ", coadmin_labels[cluster_name])
-  func_slide_v_txt(txt_admin_cov_visit)
+  func_slide_v_txt(paste0(
+    "Admin coverage of vaccines co-administered at the ", cluster_name, " visit ",
+    "per the national schedule. ", coadmin_labels[cluster_name]
+  ))
 }
 
 
@@ -264,35 +288,38 @@ func_slide_bb("Denominator Checks")
 
 # year-to-year % change in target population (all vaccines)
 func_slide_v(dml_plt_denom_change)
-txt_denom_line <- paste0("Percent change from previous year in the number of children in the target population (denominator) by vaccine. Red and orange points flag changes exceeding ± 10pp and ± 5pp, respectively. Blue line shows raw counts on the secondary axis. Blue line shows raw counts on the secondary axis.")
-func_slide_v_txt(txt_denom_line)
+func_slide_v_txt(paste0(
+  "Year-to-year percentage change in the number of children in the target population (denominator) ",
+  "by vaccine. Red points flag changes exceeding ±", pct_threshold * 100,
+  "%. Green line shows raw counts on the secondary axis."))
 
 # live births (BCG) vs surviving infants (DTP1)
 func_slide_v(dml_plt_births_vs_si)
-txt_births_si <- paste0("Comparison of live births (BCG denominator) and surviving infants (DTP1 denominator) ",
-                        "over time, ", min_yr_plots, "–", rev_yr)
-func_slide_v_txt(txt_births_si)
+func_slide_v_txt(paste0(
+  "Comparison of live births (BCG denominator) and surviving infants (DTP1 denominator) ",
+  "over time, ", min_yr_plots, "–", rev_yr))
 
 # % change in BCG and DTP1 denominators
 func_slide_v(dml_plt_denom_pct_change)
-txt_perc_change_denom <- paste0("Percent change from previous year in BCG (live births) and DTP1 (surviving infants) denominators. ",
-                                "Red and orange points flag changes exceeding ± 10pp and ± 5pp, respectively.")
-func_slide_v_txt(txt_perc_change_denom)
+func_slide_v_txt(paste0(
+  "Year-to-year percentage change in BCG (live births) and DTP1 (surviving infants) denominators. ",
+  "Red points flag changes exceeding ±", pct_threshold * 100, "%."))
 
 # ── SECTION DIVIDER: DROPOUT & CO-ADMINISTRATION ────────────────────────────
 func_slide_bb("Dropout & Co-administration")
 
 # dropout rates
 func_slide_vnologo(dml_plt_dropout_with_rate)
-txt_dropout <- paste0("Admin coverage for key vaccine pairs (DTP1→DTP3, DTP1→MCV1) with dropout rate shown as bars. ",
-                      "High dropout may indicate supply, access, or demand barriers.")
-func_slide_v_txt(txt_dropout)
+func_slide_v_txt(paste0(
+  "Admin coverage for key vaccine pairs (DTP1→DTP3, DTP1→MCV1) with dropout rate shown as bars. ",
+  "High dropout may indicate supply, access, or demand barriers."))
 
 # DTP3–PCVC co-administration
 func_slide_v(dml_plt_coadmin_dtp_pcv)
-txt_coadmin <- paste0("Admin coverage for DTP3 and PCVC, which are co-administered at ", dtp3_pcvc_time, " in ", .current_country,
-                      ".\n\nDivergence between the two series may indicate a reporting inconsistency.")
-func_slide_v_txt(txt_coadmin)
+func_slide_v_txt(paste0(
+  "Admin coverage for DTP3 and PCVC, which are co-administered at ", dtp3_pcvc_time, " in ", .current_country,
+  ".\n\nDivergence between the two series may indicate a reporting inconsistency."))
+
 
 # Co-administration by schedule time point (dynamic checks for whichever vaccines are co-administered in this country)
 func_slide_bb("Co-administration by Schedule Time Point")
@@ -301,9 +328,10 @@ for (cluster_name in names(plt_coadmin_list)) {
   
   dml_plt <- rvg::dml(ggobj = plt_coadmin_list[[cluster_name]], editable = TRUE)
   func_slide_v(dml_plt)
-  txt_coadmin_schedule <- paste0("Admin coverage of vaccines co-administered at the ", cluster_name, " visit ",
-                                 "per the national schedule. ", coadmin_labels[cluster_name])
-  func_slide_v_txt(txt_coadmin_schedule)
+  func_slide_v_txt(paste0(
+    "Admin coverage of vaccines co-administered at the ", cluster_name, " visit ",
+    "per the national schedule. ", coadmin_labels[cluster_name]
+  ))
 }
 
 # # 6-week vaccine cluster
@@ -317,124 +345,150 @@ for (cluster_name in names(plt_coadmin_list)) {
 # ── SECTION DIVIDER: DATA AVAILABILITY ───────────────────────────────────────
 func_slide_bb("Data Availability")
 
-# vaccine introductions table
-if (!no_data(tbl_intro_r) && nrow(tbl_intro_r) > 0 && ncol(tbl_intro_r) > 0) {
-  doc <- add_slide(doc, layout = "data_1", master = "Office Theme")
-  doc <- ph_with(doc,
-                 value = fpar(ftext("Vaccine Introductions",
-                                    prop = fp_text(font.size = 28, color = "black", font.family = "Calibri"))),
-                 location = ph_location(left = 0.6, top = 0.6, width = 8, height = 1))
-  doc <- ph_with(x = doc, value = tbl_intro,
-                 location = ph_location(left = 0.6, top = 1.5, width = 10, height = 5))
-  txt_intro_table <- "Year in which each vaccine was introduced nationally, partially, for risk groups, or risk areas.\n\n We present the vaccination introductions table here to contextualize the data availability heatmap on the following slide."
-  func_slide_v_txt(txt_intro_table)
-}
-
 # missing data heatmap
 func_slide_v(dml_plt_missing_heatmap)
-txt_missing_heatmap <- paste0("Heatmap showing whether admin data are present (green), missing (red), or not applicable ",
-                              "because the vaccine had not yet been introduced (white), by vaccine and year.") 
-func_slide_v_txt(txt_missing_heatmap)
+func_slide_v_txt(paste0(
+  "Heatmap showing whether admin data are present (green), missing (red), or not applicable ",
+  "because the vaccine had not yet been introduced (white), by vaccine and year."))
 
-# code to pull & organize comments tables is in comments_script.R
-
-
-# ── SECTION DIVIDER: ADMIN DATA COMMENTS ─────────────────────────────────────
+## ── SECTION DIVIDER: ADMIN DATA COMMENTS ─────────────────────────────────────
 func_slide_bb("Admin Data Comments")
 
-# Step 1: Prep data and define all txt_ variables (language-agnostic/English base)
-source(file.path(dqfolder, "comments_data.R"), local = FALSE)
+# ── PREP COMMENTS DATA ────────────────────────────────────────────────────────
+last_5_yrs <- (rev_yr - n_years_comparison_plot + 1):rev_yr
 
-# Step 2: Collect ALL txt_ vars AFTER they've been defined by the source file
-text_vars_en <- mget(ls(pattern = "^txt_"), envir = .GlobalEnv)
+comments_country <- comments %>%
+  filter(iso3c == .current_iso3c,
+         year %in% last_5_yrs,
+         !is.na(SOURCE_CMT), SOURCE_CMT != "", SOURCE_CMT != "NK") %>%
+  select(iso3c, year, CMT_FIELDS, SOURCE_CMT) %>%
+  mutate(SOURCE_CMT = case_when(
+    SOURCE_CMT %in% c("-2222", "-4444") ~ "No comment provided",
+    TRUE ~ SOURCE_CMT)) %>% 
+  mutate(CMT_FIELDS = case_when(
+      CMT_FIELDS == "factor_accuracy_num"      ~ "Numerator Accuracy",
+      CMT_FIELDS == "explanation_denom_source" ~ "Denominator Source",
+      CMT_FIELDS == "factor_accuracy_denom"    ~ "Denominator Accuracy",
+      TRUE ~ CMT_FIELDS)) %>%
+  arrange(CMT_FIELDS, desc(year))
 
-# ── SAVE DOC CHECKPOINT (before language-specific comments) ──────────────────
-doc_before_comments <- doc
-
-# ── LANGUAGE LOOP ─────────────────────────────────────────────────────────────
-for (language in languages) {
+# ── HELPER: BUILD A FLEXTABLE FOR ONE CMT_FIELDS CATEGORY ────────────────────
+make_comments_tbl <- function(df, category) {
+  df_cat <- df %>% filter(CMT_FIELDS == category) %>% select(year, SOURCE_CMT)
   
-  # 1. Restore doc to pre-comments state
-  doc <- doc_before_comments
+  if (nrow(df_cat) == 0) return(NULL)
   
-  # 2. Source the DeepL environment structures
-  source(str_glue("{utils}/R/narrative-translation_deepl.R"))
+  colnames(df_cat) <- c("Year", "Comment")
   
-  # 3. Fetch translations (Returns text_vars_en directly if language == "en")
-  text_vars <- get_text_vars(lang = language)
+  df_cat$Year <- as.character(df_cat$Year)
   
-  # 4. Step 3: Build comments slides using text_vars for this language
-  source(file.path(dqfolder, "comments_slides.R"), local = FALSE)
+  ft <- flextable(df_cat) %>%
+    set_header_labels(Year = "Year", Comment = "Comment") %>%
+    width(j = "Year",    width = 0.8) %>%
+    width(j = "Comment", width = 8.2) %>%
+    hrule(rule = "auto", part = "body") %>%       # ← allow rows to auto-expand
+    set_table_properties(layout = "fixed", opts_word = list(split = FALSE)) %>%
+    fontsize(size = 13, part = "all") %>%
+    font(fontname = "Calibri", part = "all") %>%
+    bold(part = "header") %>%
+    bg(bg = "#0058AB", part = "header") %>%
+    color(color = "white", part = "header") %>%
+    bg(i = seq(2, nrow(df_cat), by = 2), bg = "#EEF4FB", part = "body") %>%
+    border_remove() %>%
+    hline(part = "body", border = fp_border(color = "#D0D0D0", width = 0.5)) %>%
+    align(j = "Year",    align = "center", part = "all") %>%
+    align(j = "Comment", align = "left",   part = "body") %>%
+    valign(valign = "top", part = "body")
   
-  # ── APPENDIX ────────────────────────────────────────────────────────────────
-  
-  # Safe Check: Extract translated Appendix Title without crashing if missing
-  if ("txt_appendix_title" %in% names(text_vars)) {
-    translated_title <- text_vars[["txt_appendix_title"]]
-  } else {
-    translated_title <- "Supplementary Information" # Fallback default
-  }
-  func_slide_bb(translated_title)
-  
-  # Render heatmap visualization
-  min_yr <- min(df$year)
-  max_yr <- max(df$year)
-  func_slide_v(dml_plt_all_vax_heatmap)
-  
-  # Safe Check: Dynamic string mapping for Heatmap Footnote Text
-  if ("txt_wuenic_heatmap" %in% names(text_vars)) {
-    heatmap_template <- text_vars[["txt_wuenic_heatmap"]]
-  } else {
-    heatmap_template <- "WHO/UNICEF coverage estimates across all vaccines, {min_yr}–{max_yr}. Blank cells indicate years prior to vaccine introduction."
-  }
-  
-  # str_glue formats the years safely into whatever language DeepL returned
-  txt_wuenic_heatmap <- str_glue(heatmap_template)
-  func_slide_v_txt(txt_wuenic_heatmap)
-  
-  # ── SAVE ────────────────────────────────────────────────────────────────────
-  folder_path <- file.path(dq_folder, "DQProduct/outputs/all_countries")
-  dir.create(folder_path, recursive = TRUE, showWarnings = FALSE)
-  
-  suffix <- str_glue("_{language}")
-  print(doc, target = file.path(folder_path, paste0(.current_country, "_DQ", suffix, ".pptx")))
-  cat("  💾 Saved:", language, "version\n")
+  ft
 }
 
-# # ── LANGUAGE LOOP ─────────────────────────────────────────────────────────────
-# for (language in languages) {
-#   
-#   # restore doc to pre-comments state
-#   doc <- doc_before_comments
-#   
-#   source(str_glue("{utils}/R/narrative-translation_deepl.R"))
-#   source(file.path(dqfolder, "comments_data.R"), local = FALSE)
-#   
-#   if (language == "en") {
-#     text_vars <- text_vars_en
-#   }
-#   
-#   text_vars <- get_text_vars(lang = language)
-#   
-#   # Step 3: build comments slides using text_vars for this language
-#   source(file.path(dqfolder, "comments_slides.R"), local = FALSE)
-#   
-#   # ── APPENDIX ────────────────────────────────────────────────────────────────
-#   translated_title <- get_text2("txt_appendix_title", text_vars)
-#   func_slide_bb(translated_title)
-#   
-#   min_yr <- min(df$year)
-#   max_yr <- max(df$year)
-#   func_slide_v(dml_plt_all_vax_heatmap)
-#   txt_wuenic_heatmap <- paste0("WHO/UNICEF coverage estimates across all vaccines, ", min_yr, "–", max_yr, ".",
-#                                " Blank cells indicate years prior to vaccine introduction.")
-#   func_slide_v_txt(txt_wuenic_heatmap)
-#   
-#   # ── SAVE ────────────────────────────────────────────────────────────────────
-#   folder_path <- file.path(dq_folder, "DQProduct/outputs/all_countries")
-#   dir.create(folder_path, recursive = TRUE, showWarnings = FALSE)
-#   
-#   suffix <- str_glue("_{language}")
-#   print(doc, target = file.path(folder_path, paste0(.current_country, "_DQ", suffix, ".pptx")))
-#   cat("  💾 Saved:", language, "version\n")
-# }
+# ── RENDER ONE SLIDE PER CATEGORY (only if data exists) ──────────────────────
+comment_categories <- list(
+  list(label = "Numerator Accuracy",  field = "Numerator Accuracy",
+       note  = paste0("Factors limiting the accuracy of the numerator as reported by ", .current_country, ".")),
+  list(label = "Denominator Source",  field = "Denominator Source",
+       note  = "Explanation of how the denominators (target population) are obtained."),
+  list(label = "Denominator Accuracy", field = "Denominator Accuracy",
+       note  = paste0("Factors limiting the accuracy of the denominator as reported by ", .current_country, "."))
+)
+
+for (cat in comment_categories) {
+  ft <- make_comments_tbl(comments_country, cat$field)
+  
+  if (is.null(ft)) next   # skip slide entirely if no data for this category
+  
+  doc <- add_slide(doc, layout = "data_1", master = "Office Theme")
+  
+  # slide title
+  doc <- ph_with(
+    x        = doc,
+    value    = fpar(ftext(
+      paste0("Admin Data Comments: ", cat$label, " (", min(last_5_yrs), "–", rev_yr, ")"),
+      prop   = fp_text(font.size = 24, color = "black", font.family = "Calibri"))),
+    location = ph_location(left = 0.6, top = 0.4, width = 12, height = 0.8))
+  
+  # table body
+  doc <- ph_with(
+    x        = doc,
+    value    = ft,
+    location = ph_location(left = 0.6, top = 1.3, width = 8.2, height = 5.2))
+  
+  # footnote via your existing helper
+  func_slide_v_txt(paste0(
+    cat$note, " Last ", n_years_comparison_plot, " years shown (", min(last_5_yrs), "–", rev_yr, ")."))
+}
+
+# ── OPTIONAL: COMBINED SUMMARY SLIDE (all 3 categories, most recent year only) ─
+most_recent_yr <- comments_country %>% pull(year) %>% max(na.rm = TRUE)
+
+comments_summary <- comments_country %>%
+  filter(year == most_recent_yr) %>%
+  select(CMT_FIELDS, SOURCE_CMT) %>%
+  rename(`Comment Type` = CMT_FIELDS, Comment = SOURCE_CMT)
+
+if (nrow(comments_summary) > 0) {
+  
+  ft_summary <- flextable(comments_summary) %>%
+    width(j = "`Comment Type`", width = 2.2) %>%
+    width(j = "Comment",        width = 7) %>%
+    fontsize(size = 13, part = "all") %>%
+    font(fontname = "Calibri", part = "all") %>%
+    bold(part = "header") %>%
+    bg(bg = "#0058AB", part = "header") %>%
+    color(color = "white", part = "header") %>%
+    bg(i = seq(2, nrow(comments_summary), by = 2), bg = "#EEF4FB", part = "body") %>%
+    border_remove() %>%
+    hline(part = "body", border = fp_border(color = "#D0D0D0", width = 0.5)) %>%
+    align(j = "`Comment Type`", align = "left", part = "all") %>%
+    align(j = "Comment",        align = "left", part = "body") %>%
+    valign(valign = "top", part = "body") %>%
+    set_table_properties(layout = "fixed")
+  
+  doc <- add_slide(doc, layout = "data_1", master = "Office Theme")
+  
+  doc <- ph_with(
+    x        = doc,
+    value    = fpar(ftext(
+      paste0("Admin Data Comments Summary: ", most_recent_yr),
+      prop   = fp_text(font.size = 24, color = "black", font.family = "Calibri"))),
+    location = ph_location(left = 0.6, top = 0.4, width = 12, height = 0.8))
+  
+  doc <- ph_with(
+    x        = doc,
+    value    = ft_summary,
+    location = ph_location(left = 0.6, top = 1.3, width = 8, height = 4))
+  
+  func_slide_v_txt(paste0(
+    "Summary of all admin data comment fields for the most recent year with available data (",
+    most_recent_yr, ")."))
+}
+
+# ── SAVE ─────────────────────────────────────────────────────────────────────
+folder_path <- file.path(directory, type, "outputs/all_countries")
+#folder_path <- file.path("/Users/UNICEF/Desktop")
+dir.create(folder_path, recursive = TRUE, showWarnings = FALSE)
+
+print(doc, target = file.path(folder_path, paste0(.current_country, "_DQ.pptx")))
+
+#message("✓ Data quality report saved to: ", folder_path)

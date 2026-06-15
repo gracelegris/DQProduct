@@ -68,76 +68,64 @@ source(file.path(PrjDir, "R/all_vax_heatmap.R"))
 ### Summary Table: Coverage by Vaccine and Source
 ## ---------------------------------------------------------------------------------------------------------------------
 
-# # data prep
-# recent_years <- sort(unique(wuenic_master_current$Year), decreasing = TRUE)[1:n_years_comparison_plot]
-# 
-# min_yr <- min(recent_years)
-# max_yr <- max(recent_years)
-# 
-# summary_long <- wuenic_master_current %>%
-#   filter(Year %in% recent_years) %>%
-#   select(Vaccine, Year, WUENIC, Admin, Official) %>%
-#   pivot_longer(cols = c(WUENIC, Admin, Official), names_to = "Source", values_to = "Coverage") %>%
-#   mutate(
-#     label = ifelse(is.na(Coverage), "—", sprintf("%.0f", Coverage)),
-#     Source  = factor(Source, levels = c("WUENIC", "Admin", "Official")),
-#     Year    = factor(Year),
-#     Vaccine = factor(Vaccine, levels = rev(c("BCG", "HepBB", "DTP1", "DTP3", "Hib3", "HepB3",
-#                                              "PCVC", "RotaC", "POL3", "IPV1", "IPVC",
-#                                              "MCV1", "RCV1", "MCV2", "YFV", "MengA", "HPVc")))
-#   ) %>% 
-#   mutate(Source = recode(Source, "WUENIC" = "WHO/UNICEF", "Official" = "Official (Government Estimate)"))
-# 
-# survey_data_long <- wuenic_master_current %>% 
-#   filter(Year %in% recent_years) %>%
-#   select(Vaccine, Year, Survey) %>%
-#   pivot_longer(cols = c(Survey), names_to = "Source", values_to = "Coverage") %>%
-#   mutate(
-#     Source  = factor(Source, levels = c("Survey")),
-#     Year    = factor(Year),
-#     Vaccine = factor(Vaccine, levels = rev(c("BCG", "HepBB", "DTP1", "DTP3", "Hib3", "HepB3",
-#                                              "PCVC", "RotaC", "POL3", "IPV1", "IPVC",
-#                                              "MCV1", "RCV1", "MCV2", "YFV", "MengA", "HPVc")))
-#   )
-# 
-# max_cov <- max(summary_long$Coverage, na.rm = TRUE)
-# 
-# # plot
-# plt_summary_table <- ggplot(summary_long, aes(x = Year, y = Vaccine, fill = Coverage)) +
-#   geom_tile(color = "white", linewidth = 0.4) +
-#   geom_text(aes(label = label, color = "white"), size = 4) +
-#   scale_fill_gradientn(
-#     colours  = c('#B50800', '#E2231A', '#F26A21', '#FFC20E', '#80BD41', '#00833D'),
-#     values   = scales::rescale(c(0, 57, 67, 77, 87, 94, 100)),
-#     guide    = "colorbar",
-#     limits   = c(0, 100),
-#     oob      = scales::squish,
-#     breaks   = c(0, 59, 69, 79, 89, 100),
-#     labels   = c("0", "60", "70", "80", "90", "100"),
-#     na.value = "#d3d3d3"
-#   ) +
-#   scale_color_identity() +
-#   facet_wrap(~Source, ncol = 3) +
-#   theme_minimal() +
-#   labs(
-#     title = paste0(t_lookup("plt_coverage_trends_title", language), ", ", .current_country, ", ", min_yr_plots, "–", rev_yr),
-#     x = t_lookup("axis_year", language), y = NULL,
-#     fill = t_lookup("coverage", language),
-#     caption = "WHO/UNICEF HPV coverage estimates not included in table."
-#   ) +
-#   theme(
-#     plot.title       = element_text(hjust = 0.5, size = 14),
-#     plot.subtitle    = element_text(hjust = 0.5, size = 11),
-#     strip.background = element_rect(fill = "#0083CF"),
-#     strip.text       = element_text(color = "white", face = "bold", size = 11),
-#     panel.grid       = element_blank(),
-#     axis.text.x      = element_text(size = 9),
-#     axis.text.y      = element_text(size = 9),
-#     panel.border     = element_rect(color = "grey80", fill = NA),
-#     legend.position  = "bottom",
-#     legend.key.width = unit(2, "cm")
-#   )
-# plt_summary_table
+# data prep
+recent_years <- sort(unique(wuenic_master_current$Year), decreasing = TRUE)[1:n_years_comparison_plot]
+
+min_yr <- min(recent_years)
+max_yr <- max(recent_years)
+
+summary_long <- wuenic_master_current %>%
+  filter(Year %in% recent_years) %>%
+  select(Vaccine, Year, WUENIC, Admin, Official) %>%
+  pivot_longer(cols = c(WUENIC, Admin, Official), names_to = "Source", values_to = "Coverage") %>%
+  mutate(
+    label = ifelse(is.na(Coverage), "—", sprintf("%.0f", Coverage)),
+    Source  = factor(Source, levels = c("WUENIC", "Admin", "Official")),
+    Year    = factor(Year),
+    Vaccine = factor(Vaccine, levels = rev(c("BCG", "HepBB", "DTP1", "DTP3", "Hib3", "HepB3",
+                                             "PCVC", "RotaC", "POL3", "IPV1", "IPVC",
+                                             "MCV1", "RCV1", "MCV2", "YFV", "MengA", "HPVc")))
+  ) %>% 
+  mutate(Source = recode(Source, "WUENIC" = "WHO/UNICEF", "Official" = "Official (Government Estimate)"))
+
+max_cov <- max(summary_long$Coverage, na.rm = TRUE)
+
+# plot
+plt_summary_table <- ggplot(summary_long, aes(x = Year, y = Vaccine, fill = Coverage)) +
+  geom_tile(color = "white", linewidth = 0.4) +
+  geom_text(aes(label = label, color = "white"), size = 4) +
+  scale_fill_gradientn(
+    colours  = c('#B50800', '#E2231A', '#F26A21', '#FFC20E', '#80BD41', '#00833D'),
+    values   = scales::rescale(c(0, 57, 67, 77, 87, 94, 100)),
+    guide    = "colorbar",
+    limits   = c(0, 100),
+    oob      = scales::squish,
+    breaks   = c(0, 59, 69, 79, 89, 100),
+    labels   = c("0", "60", "70", "80", "90", "100"),
+    na.value = "#d3d3d3"
+  ) +
+  scale_color_identity() +
+  facet_wrap(~Source, ncol = 3) +
+  theme_minimal() +
+  labs(
+    title = paste0("Coverage Trends by Vaccine and Source, ", .current_country, ", ", min_yr, "–", max_yr),
+    x = "Year", y = NULL,
+    fill = "Coverage (%)",
+    caption = "WHO/UNICEF HPV coverage estimates not included in table."
+  ) +
+  theme(
+    plot.title       = element_text(hjust = 0.5, size = 14),
+    plot.subtitle    = element_text(hjust = 0.5, size = 11),
+    strip.background = element_rect(fill = "#0083CF"),
+    strip.text       = element_text(color = "white", face = "bold", size = 11),
+    panel.grid       = element_blank(),
+    axis.text.x      = element_text(size = 9),
+    axis.text.y      = element_text(size = 9),
+    panel.border     = element_rect(color = "grey80", fill = NA),
+    legend.position  = "bottom",
+    legend.key.width = unit(2, "cm")
+  )
+plt_summary_table
 
 ## ---------------------------------------------------------------------------------------------------------------------
 ### Coverage Line Plots for all 4 Indicators (WUENIC, Admin, Official, Survey)
@@ -158,71 +146,20 @@ source_colors_line <- c("WHO/UNICEF" = "blue", "Admin" = "#e93626",
 
 source_shapes <- c("WHO/UNICEF" = 16, "Admin" = 8, "Official (Government Estimate)" = 16, "Survey" = 17)
 
-# for most recent year, find the difference between the admin and wuenic
-gap_admin_wuenic <- all_line_data %>% 
-  filter(Year == rev_yr) %>% 
-  filter(Source %in% c("Admin", "WHO/UNICEF")) %>% 
-  group_by(Vaccine) %>% 
-  pivot_wider(names_from = Source, values_from = Coverage) %>% 
-  mutate(gap = Admin - `WHO/UNICEF`) %>% 
-  select(Vaccine, Year, Admin, `WHO/UNICEF`, gap)
-
-data_year <- all_line_data %>% filter(Source == "WHO/UNICEF") %>% group_by(Vaccine) %>% slice(n()) %>% pull(Year) %>% unique()
-
-# set the bottom and top year for the bracket betweeb rev_yr admin and wuenic estimates
-bracket_data <- all_line_data %>%
-  filter(Year == rev_yr, Source %in% c("WHO/UNICEF", "Admin")) %>%
-  select(Vaccine, Year, Source, Coverage) %>%
-  tidyr::pivot_wider(names_from = Source, values_from = Coverage) %>%
-  mutate(
-    y_max = pmax(`WHO/UNICEF`, Admin, na.rm = TRUE), 
-    y_min = pmin(`WHO/UNICEF`, Admin, na.rm = TRUE), 
-    x_position = rev_yr + 1.4,
-    cap_width = 0.5
-  )
-
 plt_all_vax_line <- ggplot(all_line_data, aes(x = Year, y = Coverage, color = Source, shape = Source)) +
   geom_line(data = all_line_data %>% filter(Source == "WHO/UNICEF"), size = 0.8, alpha = 0.7) +
   geom_hline(yintercept = 100, linetype = "dashed", color = "black", alpha = 1) +
   geom_point(data = all_line_data %>% filter(Source %in% c("Survey", "Official (Government Estimate)")), size = 2.7, alpha = 0.8) +
   geom_point(data = all_line_data %>% filter(Source == "Admin"), size = 1.7, alpha = 0.9) +
   facet_wrap(~Vaccine, scales = "fixed") +
-  geom_text(data = gap_admin_wuenic, aes(x = (data_year - 9.5), y = 0, label = paste0(t_lookup("label_admin_wuenic_gap", language), ": ", gap, t_lookup("unit_pp", language))),
-                        color = "#6A1E74", size = 2.5, vjust = 0, hjust = 0.5, inherit.aes = FALSE) +
-  geom_segment(data = gap_admin_wuenic %>% filter(Year == rev_yr), aes(x = Year, xend = Year, y = 13, yend = 27), # arrow showing the gap is from rev_yr
-    arrow = arrow(length = unit(0.15, "cm"), type = "open"), color = "#6A1E74", linewidth = 0.8, inherit.aes = FALSE) +
-  geom_vline(data = gap_admin_wuenic %>% filter(Year == rev_yr), aes(xintercept = Year), color = "#6A1E74", linetype = "dashed", linewidth = 0.8, inherit.aes = FALSE, alpha = 0.3) +
-  # bracket between admin and wuenic for the most recent year
-  geom_segment(data = bracket_data, aes(x = x_position, xend = x_position, y = y_min, yend = y_max), color = "#6A1E74", linewidth = 0.7, inherit.aes = FALSE) +
-  geom_segment(data = bracket_data, aes(x = x_position, xend = x_position - cap_width, y = y_max, yend = y_max), color = "#6A1E74", linewidth = 0.7, inherit.aes = FALSE) +
-  geom_segment(data = bracket_data, aes(x = x_position, xend = x_position - cap_width, y = y_min, yend = y_min), color = "#6A1E74", linewidth = 0.7, inherit.aes = FALSE) +
-  scale_color_manual(
-    values = source_colors_line,
-    labels = c(
-      "WHO/UNICEF" = t_lookup("source_who_unicef", language),
-      "Admin" = t_lookup("source_admin",    language),
-      "Official (Government Estimate)" = t_lookup("source_official", language),
-      "Survey" = t_lookup("source_survey",   language)
-    )
-  ) +
-  scale_shape_manual(
-    values = source_shapes,
-    labels = c(
-      "WHO/UNICEF" = t_lookup("source_who_unicef", language),
-      "Admin" = t_lookup("source_admin",    language),
-      "Official (Government Estimate)" = t_lookup("source_official", language),
-      "Survey" = t_lookup("source_survey",   language)
-    )
-  ) +
-  scale_x_continuous(
-    breaks = seq(min(all_line_data$Year), max(all_line_data$Year), by = 2),
-    limits = c(min(all_line_data$Year), max(all_line_data$Year) + 1.5)
-  ) +
-  scale_y_continuous(limits = c(0, max_cov), breaks = seq(0, max_cov, by = 25), labels = scales::label_number(suffix = "%")) +
+  scale_color_manual(values = source_colors_line) +
+  scale_shape_manual(values = source_shapes) +
+  scale_x_continuous(breaks = seq(min(all_line_data$Year), max(all_line_data$Year), by = 2)) +
+  scale_y_continuous(limits = c(min_cov, max_cov), breaks = seq(min_cov, max_cov, by = 25), labels = scales::label_number(suffix = "%")) +
   theme_minimal() +
   labs(
-    title = paste0(t_lookup("plt_coverage_trends_title", language), ", ", .current_country, ", ", min_yr_plots, "–", rev_yr),
-    x = t_lookup("axis_year", language), y = t_lookup("coverage", language), color = t_lookup("legend_data_source", language), shape = t_lookup("legend_data_source", language)
+    title  = paste0("Coverage Trends by Vaccine and Source, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
+    x = "Year", y = "Coverage (%)", color = "Data Source", shape = "Data Source"
   ) +
   theme(
     legend.position  = "bottom",
@@ -246,68 +183,20 @@ selected_line_data <- all_line_data %>%
 min_cov <- floor(min(selected_line_data$Coverage, na.rm = TRUE) / 25) * 25
 max_cov <- ceiling(max(selected_line_data$Coverage, na.rm = TRUE) / 10) * 10
 
-# for most recent year, find the difference between the admin and wuenic
-gap_admin_wuenic_small <- selected_line_data %>% 
-  filter(Year == rev_yr) %>% 
-  filter(Source %in% c("Admin", "WHO/UNICEF")) %>% 
-  group_by(Vaccine) %>% 
-  pivot_wider(names_from = Source, values_from = Coverage) %>% 
-  mutate(gap = Admin - `WHO/UNICEF`) %>% 
-  select(Vaccine, Year, Admin, `WHO/UNICEF`, gap)
-
-data_year <- all_line_data %>% filter(Source == "WHO/UNICEF") %>% group_by(Vaccine) %>% slice(n()) %>% pull(Year) %>% unique()
-
-# set the bottom and top year for the bracket betweeb rev_yr admin and wuenic estimates
-bracket_data_small <- selected_line_data %>%
-  filter(Year == rev_yr, Source %in% c("WHO/UNICEF", "Admin")) %>%
-  select(Vaccine, Year, Source, Coverage) %>%
-  tidyr::pivot_wider(names_from = Source, values_from = Coverage) %>%
-  mutate(
-    y_max = pmax(`WHO/UNICEF`, Admin, na.rm = TRUE), 
-    y_min = pmin(`WHO/UNICEF`, Admin, na.rm = TRUE), 
-    x_position = rev_yr + 1.4,
-    cap_width = 0.5
-  )
-
 plt_selected_vax_line <- ggplot(selected_line_data, aes(x = Year, y = Coverage, color = Source, shape = Source)) +
   geom_line(data = selected_line_data %>% filter(Source == "WHO/UNICEF"), size = 0.8, alpha = 0.7) +
   geom_hline(yintercept = 100, linetype = "dashed", color = "black", alpha = 1) +
   geom_point(data = selected_line_data %>% filter(Source %in% c("Survey", "Official (Government Estimate)")), size = 3, alpha = 0.7) +
   geom_point(data = selected_line_data %>% filter(Source == "Admin"), size = 2, alpha = 0.9) +
   facet_wrap(~Vaccine, scales = "fixed") +
-  geom_text(data = gap_admin_wuenic_small, aes(x = (data_year - 9.5), y = min_cov, label = paste0(t_lookup("label_admin_wuenic_gap", language), ": ", gap, t_lookup("unit_pp", language))),
-                        color = "#6A1E74", size = 3.5, vjust = 0, hjust = 0.5, inherit.aes = FALSE, label.color = NA) +
-  geom_segment(data = gap_admin_wuenic_small %>% filter(Year == rev_yr), aes(x = Year, xend = Year, y = (min_cov + 5), yend = (min_cov + 10)), # arrow showing the gap is from rev_yr
-               arrow = arrow(length = unit(0.15, "cm"), type = "open"), color = "#6A1E74", linewidth = 0.8, inherit.aes = FALSE) +
-  geom_vline(data = gap_admin_wuenic_small %>% filter(Year == rev_yr), aes(xintercept = Year), color = "#6A1E74", linetype = "dashed", linewidth = 0.8, inherit.aes = FALSE, alpha = 0.3) +
-  # bracket between admin and wuenic for the most recent year
-  geom_segment(data = bracket_data_small, aes(x = x_position, xend = x_position, y = y_min, yend = y_max), color = "#6A1E74", linewidth = 0.7, inherit.aes = FALSE) +
-  geom_segment(data = bracket_data_small, aes(x = x_position, xend = x_position - cap_width, y = y_max, yend = y_max), color = "#6A1E74", linewidth = 0.7, inherit.aes = FALSE) +
-  geom_segment(data = bracket_data_small, aes(x = x_position, xend = x_position - cap_width, y = y_min, yend = y_min), color = "#6A1E74", linewidth = 0.7, inherit.aes = FALSE) +
-  scale_color_manual(
-    values = source_colors_line,
-    labels = c(
-      "WHO/UNICEF"                    = t_lookup("source_who_unicef", language),
-      "Admin" = t_lookup("source_admin",    language),
-      "Official (Government Estimate)" = t_lookup("source_official", language),
-      "Survey" = t_lookup("source_survey",   language)
-    )
-  ) +
-  scale_shape_manual(
-    values = source_shapes,
-    labels = c(
-      "WHO/UNICEF" = t_lookup("source_who_unicef", language),
-      "Admin" = t_lookup("source_admin",    language),
-      "Official (Government Estimate)" = t_lookup("source_official", language),
-      "Survey" = t_lookup("source_survey",   language)
-    )
-  ) +
+  scale_color_manual(values = source_colors_line) +
+  scale_shape_manual(values = source_shapes) +
   scale_x_continuous(breaks = seq(min(selected_line_data$Year), max(selected_line_data$Year), by = 2)) +
   scale_y_continuous(limits = c(min_cov, max_cov), breaks = seq(min_cov, max_cov, by = 25), labels = scales::label_number(suffix = "%")) +
   theme_minimal() +
   labs(
-    title = paste0(t_lookup("plt_coverage_trends_title", language), ", ", .current_country, ", ", min_yr_plots, "–", rev_yr),
-    x = t_lookup("axis_year", language), y = t_lookup("coverage", language), color = t_lookup("legend_data_source", language), shape = t_lookup("legend_data_source", language)
+    title  = paste0("Coverage Trends by Vaccine and Source, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
+    x = "Year", y = "Coverage (%)", color = "Data Source", shape = "Data Source"
   ) +
   theme(
     legend.position  = "bottom",
@@ -319,7 +208,6 @@ plt_selected_vax_line <- ggplot(selected_line_data, aes(x = Year, y = Coverage, 
     strip.text       = element_text(color = "white", face = "bold"),
     plot.title       = element_text(hjust = 0.5, size = 14)
   )
-plt_selected_vax_line
 
 ## ---------------------------------------------------------------------------------------------------------------------
 ### Coverage > 100% and sudden drops flagged by vaccine and year (Admin data)
@@ -345,36 +233,27 @@ plt_coverage_flags <- ggplot(combined_flag_data, aes(x = Year, y = Admin)) +
   geom_line(color = "grey60") +
   geom_point(aes(color = flag_type), size = 2.2) +
   facet_wrap(~Vaccine) +
+  # make y axis 0 to 110
   scale_y_continuous(limits = c(0, 110), breaks = seq(0, 100, by = 25), labels = scales::label_number(suffix = "%")) +
   scale_x_continuous(breaks = seq(min(combined_flag_data$Year), max(combined_flag_data$Year), by = 2)) +
-  scale_color_manual(
-    values = c("Normal" = "black", ">100%" = "#FFC20E", "±10pp change" = "#E2231A"),
-    labels = c(
-      "Normal" = t_lookup("flag_normal",        language),
-      ">100%",
-      "±10pp change" = t_lookup("flag_large_change", language)
-    )
-  ) +
-  labs(
-    title    = paste0(t_lookup("plt_admin_flags_title", language), " ", .current_country, ", ", min_yr_plots, "–", rev_yr),
-    subtitle = paste0(t_lookup("plt_flags_subtitle", language), pct_threshold * 100, "pp"),
-    x        = t_lookup("axis_year", language),
-    y        = t_lookup("axis_admin_coverage_pct", language),
-    caption  = get_text2("txt_caption_missing_admin", text_vars),
-    color    = t_lookup("legend_flag_type", language)
-  ) +
+  scale_color_manual(values = c("Normal" = "black", ">100%" = "#FFC20E", "±10pp change" = "#E2231A")) +
   theme_minimal() +
+  labs(
+    title = paste0("Admin Coverage Flags by Vaccine and Year, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
+    subtitle = paste0("Orange = coverage > 100%  |  Red = ± ", pct_threshold*100, "pp change from previous year"),
+    x = "Year", y = "Admin Coverage (%)",
+    color = "Flag Type"
+  ) +
   theme(
-    legend.position  = "bottom",
-    axis.text.x      = element_text(angle = 45, hjust = 1, size = 8),
-    axis.ticks.x     = element_line(color = "black"),
-    axis.ticks.y     = element_line(color = "black"),
-    panel.border     = element_rect(color = "black", fill = NA, size = 0.6),
+    legend.position = "bottom",
+    axis.text.x  = element_text(angle = 45, hjust = 1, size = 8),
+    axis.ticks.x = element_line(color = "black"),
+    axis.ticks.y = element_line(color = "black"),
+    panel.border = element_rect(color = "black", fill = NA, size = 0.6),
     strip.background = element_rect(fill = "#0083CF"),
-    strip.text       = element_text(color = "white", face = "bold"),
-    plot.title       = element_text(hjust = 0.5, size = 14),
-    plot.subtitle    = element_text(hjust = 0.5, size = 11),
-    plot.caption     = element_text(size = 9)
+    strip.text = element_text(color = "white", face = "bold"),
+    plot.title = element_text(hjust = 0.5, size = 14),
+    plot.subtitle = element_text(hjust = 0.5, size = 11)
   )
 
 ## ---------------------------------------------------------------------------------------------------------------------
@@ -391,20 +270,12 @@ plt_selected_coverage_flags <- ggplot(selected_flag_data, aes(x = Year, y = Admi
   facet_wrap(~Vaccine) +
   scale_y_continuous(breaks = anchor_breaks <- pretty(selected_flag_data$Admin), labels = scales::label_number(suffix = "%")) +
   scale_x_continuous(breaks = seq(min(selected_flag_data$Year), max(selected_flag_data$Year), by = 2)) +
-  scale_color_manual(
-    values = c("Normal" = "black", ">100%" = "#FFC20E", "±10pp change" = "#E2231A"),
-    labels = c(
-      "Normal" = t_lookup("flag_normal",        language),
-      ">100%",
-      "±10pp change" = t_lookup("flag_large_change", language)
-    )
-  ) +
+  scale_color_manual(values = c("Normal" = "black", ">100%" = "#FFC20E", "±10pp change" = "#E2231A")) +
   theme_minimal() +
   labs(
-    title    = paste0(t_lookup("plt_selected_flags_title", language), " ", .current_country, ", ", min_yr_plots, "–", rev_yr),
-    subtitle = paste0(t_lookup("plt_flags_subtitle", language), pct_threshold * 100, "pp"),
-    x = t_lookup("axis_year", language), y = t_lookup("axis_admin_coverage_pct", language),
-    caption = get_text2("txt_caption_missing_admin", text_vars),
+    title = paste0("DTP1, DTP3, and MCV1 Admin Coverage Flags by Year, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
+    subtitle = paste0("Orange = coverage > 100%  |  Red = ± ", pct_threshold*100, "pp change from previous year"),
+    x = "Year", y = "Admin Coverage (%)",
     color = "Flag Type"
   ) +
   theme(
@@ -416,130 +287,48 @@ plt_selected_coverage_flags <- ggplot(selected_flag_data, aes(x = Year, y = Admi
     strip.background = element_rect(fill = "#0083CF"),
     strip.text = element_text(color = "white", face = "bold"),
     plot.title = element_text(hjust = 0.5, size = 14),
-    plot.subtitle = element_text(hjust = 0.5, size = 11),
-    plot.caption = element_text(size = 9)
+    plot.subtitle = element_text(hjust = 0.5, size = 11)
   )
 
 ## ---------------------------------------------------------------------------------------------------------------------
 ### Plot: Admin coverage vs WUENIC estimate — large gaps flagged (using wuenic_master_current)
 ## ---------------------------------------------------------------------------------------------------------------------
 
-make_admin_wuenic_plot <- function(pct_threshold) {
-  
-  gap_data <- wuenic_master_current %>%
-    mutate(gap = Admin - WUENIC, flag_large_gap = abs(gap) > pct_threshold * 100, `WHO/UNICEF` = WUENIC)
-  
-  avg_gap_last_5_years <- gap_data %>%
-    filter(Year >= (rev_yr - 4)) %>%
-    group_by(Vaccine) %>%
-    summarise(avg_gap = mean(gap, na.rm = TRUE), .groups = "drop") %>%
-    arrange(desc(abs(avg_gap)))
-  
-  gap_label <- paste0(t_lookup("label_large_gap", language), pct_threshold * 100, t_lookup("unit_pp", language), ")")
-  gap_colors <- setNames("#ed6a64", gap_label)
-  
-  avg_gap_label <- paste0(t_lookup("label_avg_gap", language), " ", sprintf("%.1f", avg_gap_last_5_years$avg_gap), t_lookup("unit_pp", language))
-  
-  y_min <- floor(min(gap_data$Admin, na.rm = TRUE) / 25) * 25
-  y_bracket <- y_min + 15
-  y_bracket_cap <- y_min + 18
-  
-  ggplot(gap_data, aes(x = Year)) +
-    geom_hline(yintercept = 100, linetype = "dashed", color = "black", alpha = 1) +
-    geom_line(aes(y = `WHO/UNICEF`, linetype = "WHO/UNICEF"), color = source_colors["WHO/UNICEF"], linewidth = 0.9, alpha = 0.7) +
-    geom_line(aes(y = Admin, linetype = "Admin"), color = source_colors["Admin"], linewidth = 0.9, alpha = 0.7) +
-    geom_segment(data = gap_data %>% filter(flag_large_gap == TRUE),
-                 aes(x = Year, xend = Year, y = Admin, yend = `WHO/UNICEF`, color = gap_label),
-                 linewidth = 0.8, alpha = 0.7, key_glyph = draw_key_vpath) +
-    geom_text(data = avg_gap_last_5_years,
-              aes(x = rev_yr, y = y_min + 5, label = paste0(t_lookup("label_avg_gap", language), ": ", sprintf("%.1f", avg_gap), t_lookup("unit_pp", language))),
-              color = "#00833D", size = 2.7, hjust = 1) +
-    geom_segment(data = avg_gap_last_5_years, aes(x = rev_yr - 4, xend = rev_yr, y = y_bracket, yend = y_bracket), color = "#00833D", linewidth = 0.5, inherit.aes = FALSE) +
-    geom_segment(data = avg_gap_last_5_years, aes(x = rev_yr - 4, xend = rev_yr - 4, y = y_bracket, yend = y_bracket_cap), color = "#00833D", linewidth = 0.5, inherit.aes = FALSE) +
-    geom_segment(data = avg_gap_last_5_years, aes(x = rev_yr, xend = rev_yr, y = y_bracket, yend = y_bracket_cap), color = "#00833D", linewidth = 0.5, inherit.aes = FALSE) +
-    facet_wrap(~Vaccine) +
-    scale_linetype_manual(
-      values = c("WHO/UNICEF" = "solid", "Admin" = "solid"),
-      labels = c("WHO/UNICEF" = t_lookup("source_who_unicef", language), "Admin" = t_lookup("source_admin", language))
-    ) +
-    scale_color_manual(name = NULL, values = gap_colors, guide = guide_legend(order = 2, override.aes = list(shape = NA, linewidth = 1.2))) +
-    scale_y_continuous(limits = c(y_min, ceiling(max(gap_data$Admin, na.rm = TRUE) / 10) * 10),
-                       breaks = seq(0, 100, by = 25), labels = scales::label_number(suffix = "%")) +
-    scale_x_continuous(breaks = seq(min(gap_data$Year), max(gap_data$Year), by = 2)) +
-    guides(linetype = guide_legend(title = t_lookup("legend_data_source", language), order = 1), color = guide_legend(title = NULL, order = 2)) +
-    labs(
-      title   = paste0(get_text2("txt_title_admin_wuenic", text_vars), ", ", .current_country, ", ", min_yr_plots, "–", rev_yr),
-      x       = t_lookup("axis_year", language),
-      y       = t_lookup("coverage", language),
-      linetype = t_lookup("legend_data_source", language),
-      caption = get_text2("txt_caption_average_gap", text_vars)
-    ) +
-    theme_minimal() +
-    theme(
-      legend.position = "bottom", legend.box = "horizontal",
-      axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
-      axis.ticks.x = element_line(color = "black"),
-      axis.ticks.y = element_line(color = "black"),
-      panel.border = element_rect(color = "black", fill = NA, size = 0.6),
-      strip.background = element_rect(fill = "#0083CF"),
-      strip.text = element_text(color = "white", face = "bold"),
-      plot.title = element_text(hjust = 0.5, size = 14),
-      plot.caption = element_text(size = 9, color = "#00833D")
-    )
-}
-
-plt_admin_wuenic_1 <- make_admin_wuenic_plot(pct_threshold)
-plt_admin_wuenic_2 <- make_admin_wuenic_plot(second_pct_threshold)
-
-## ---------------------------------------------------------------------------------------------------------------------
-### Plot: Admin coverage vs Official coverage — large gaps flagged (using wiise_admin_official)
-## ---------------------------------------------------------------------------------------------------------------------
-
-gap_data3 <- wuenic_master_current %>%
+gap_data <- wuenic_master_current %>%
   mutate(
-    gap = Admin - Official,
+    gap = Admin - WUENIC,
     flag_large_gap = abs(gap) > pct_threshold*100
   ) %>% 
-   rename(`Official (Government Estimate)` = Official)
+  mutate(`WHO/UNICEF` = WUENIC)
 
-# get average gap in the last 5 years for each vaccine
-avg_gap_last_5_years_3 <- gap_data3 %>%
-  filter(Year >= (rev_yr - 4)) %>%
-  group_by(Vaccine) %>%
-  summarise(avg_gap = mean(gap, na.rm = TRUE)) %>%
-  arrange(desc(abs(avg_gap)))
-
-plt_admin_vs_official <- ggplot(gap_data3, aes(x = Year)) +
-  geom_line(aes(y = `Official (Government Estimate)`, linetype = "Official (Government Estimate)"), color = source_colors["Official (Government Estimate)"], linewidth = 0.9, alpha = 0.7) +
-  geom_line(aes(y = Admin, linetype = "Admin"), color = source_colors["Admin"], linewidth = 0.9, alpha = 0.7) +
+plt_admin_vs_wuenic <- ggplot(gap_data, aes(x = Year)) +
   geom_hline(yintercept = 100, linetype = "dashed", color = "black", alpha = 1) +
-  geom_segment(data = gap_data3 %>% filter(flag_large_gap == TRUE),
-               aes(x = Year, xend = Year, y = Admin, yend = `Official (Government Estimate)`),
+  geom_line(aes(y = `WHO/UNICEF`, linetype = "WHO/UNICEF"), color = source_colors["WHO/UNICEF"], linewidth = 0.9, alpha = 0.7) +
+  geom_line(aes(y = Admin, linetype = "Admin"), color = source_colors["Admin"], linewidth = 0.9, alpha = 0.7) +
+  #geom_point(data = gap_data %>% filter(flag_large_gap == TRUE), aes(y = Admin), color = "red", size = 1.7) +
+  geom_segment(data = gap_data %>% filter(flag_large_gap == TRUE),
+               aes(x = Year, xend = Year, y = Admin, yend = `WHO/UNICEF`),
                color = "#ed6a64", linewidth = 0.8, alpha = 0.7) +
-  geom_text(data = avg_gap_last_5_years_3,
-            aes(x = rev_yr, y = (floor(min(gap_data3$Admin, na.rm = TRUE) / 25) * 25) + 5,
-                label = paste0(t_lookup("label_avg_gap", language), ": ", sprintf("%.1f", avg_gap), t_lookup("unit_pp", language))),
-            color = "#00833D", size = 2.7, hjust = 1) +
-  geom_segment(data = avg_gap_last_5_years_3, aes(x = rev_yr - 4, xend = rev_yr, y = (floor(min(gap_data3$Admin, na.rm = TRUE) / 25) * 25) + 15, yend = (floor(min(gap_data3$Admin, na.rm = TRUE) / 25) * 25) + 15), color = "#00833D", linewidth = 0.5, inherit.aes = FALSE) +
-  geom_segment(data = avg_gap_last_5_years_3, aes(x = rev_yr - 4, xend = rev_yr - 4, y = (floor(min(gap_data3$Admin, na.rm = TRUE) / 25) * 25) + 15, yend = (floor(min(gap_data3$Admin, na.rm = TRUE) / 25) * 25) + 17), color = "#00833D", linewidth = 0.5, inherit.aes = FALSE) +
-  geom_segment(data = avg_gap_last_5_years_3, aes(x = rev_yr, xend = rev_yr, y = (floor(min(gap_data3$Admin, na.rm = TRUE) / 25) * 25) + 15, yend = (floor(min(gap_data3$Admin, na.rm = TRUE) / 25) * 25) + 17), color = "#00833D", linewidth = 0.5, inherit.aes = FALSE) +
+  # geom_point(data = gap_data %>% filter(flag_large_gap == TRUE),
+  #            aes(y = Admin), color = "#ed6a64", size = 1) +
+  # geom_point(data = gap_data %>% filter(flag_large_gap == TRUE),
+  #            aes(y = WUENIC), color = "#ed6a64", size = 1) +
   facet_wrap(~Vaccine) +
-  scale_linetype_manual(
-    values = c("Official (Government Estimate)" = "solid", "Admin" = "solid"),
-    labels = c("Official (Government Estimate)" = t_lookup("source_official", language), "Admin" = t_lookup("source_admin", language))
+  scale_linetype_manual(values = c("WHO/UNICEF" = "solid", "Admin" = "solid")) +
+  scale_y_continuous(
+    limits = c(floor(min(gap_data$Admin,   na.rm = TRUE) / 25) * 25,
+               ceiling(max(gap_data$Admin, na.rm = TRUE) / 10) * 10),
+    breaks = seq(0, 100, by = 25), , labels = scales::label_number(suffix = "%")
   ) +
-  scale_y_continuous(limits = c(floor(min(gap_data3$Admin, na.rm = TRUE) / 25) * 25, ceiling(max(gap_data3$Admin, na.rm = TRUE) / 10) * 10),
-                     breaks = seq(0, 100, by = 25), labels = scales::label_number(suffix = "%")) +
-  scale_x_continuous(breaks = seq(min(gap_data3$Year), max(gap_data3$Year), by = 2)) +
-  guides(linetype = guide_legend(title = t_lookup("legend_data_source", language), order = 1)) +
-  labs(
-    title   = paste0(get_text2("txt_title_admin_official", text_vars), ", ", .current_country, ", ", min_yr_plots, "–", rev_yr),
-    x       = t_lookup("axis_year", language),
-    y       = t_lookup("coverage", language),
-    linetype = t_lookup("legend_data_source", language),
-    caption = get_text2("txt_caption_average_gap", text_vars)
-  ) +
+  scale_color_manual(values = c("FALSE" = "black", "TRUE" = "#ed6a64")) +
+  scale_x_continuous(breaks = seq(min(gap_data$Year), max(gap_data$Year), by = 2)) +
   theme_minimal() +
+  labs(
+    title    = paste0("Admin vs. WHO/UNICEF Coverage Estimate, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
+    subtitle = paste0("Red lines indicate gaps > ", pct_threshold * 100, " percentage points"),
+    x = "Year", y = "Coverage (%)",
+    color = "Large Gap", linetype = "Source"
+  ) +
   theme(
     legend.position  = "bottom",
     axis.text.x      = element_text(angle = 45, hjust = 1, size = 8),
@@ -549,55 +338,51 @@ plt_admin_vs_official <- ggplot(gap_data3, aes(x = Year)) +
     strip.background = element_rect(fill = "#0083CF"),
     strip.text       = element_text(color = "white", face = "bold"),
     plot.title       = element_text(hjust = 0.5, size = 14),
-    plot.caption     = element_text(size = 9, color = "#00833D")
+    plot.subtitle    = element_text(hjust = 0.5, size = 11)
   )
-plt_admin_vs_official
+plt_admin_vs_wuenic
 
 ## ---------------------------------------------------------------------------------------------------------------------
-### Plot: Numerators for all vaccines
+### Plot: Same admin vs. wuenic plot but with second threshold
 ## ---------------------------------------------------------------------------------------------------------------------
 
-all_numerators <- wuenic_master_current %>%
-  select(Vaccine, Year, ChildrenVaccinated) %>%
-  filter(!is.na(ChildrenVaccinated))
+gap_data2 <- wuenic_master_current %>%
+  mutate(
+    gap = Admin - WUENIC,
+    flag_large_gap = abs(gap) > second_pct_threshold*100
+  ) %>% 
+  mutate(`WHO/UNICEF` = WUENIC)
 
-min_numerator <- min(all_numerators$ChildrenVaccinated, na.rm = TRUE)
-max_numerator <- max(all_numerators$ChildrenVaccinated, na.rm = TRUE)
-y_breaks_num  <- pretty(c(min_numerator, max_numerator), n = 5)
-
-# color palette - one color per vaccine
-vaccine_colors <- c(
-  "BCG"    = "#1CABE2", "HepBB"  = "#0058AB", "DTP1"   = "#00833D",
-  "DTP3"   = "#80BD41", "Hib3"   = "#6A1E74", "HepB3"  = "#961A49",
-  "PCVC"   = "#E2231A", "RotaC"  = "#F26A21", "IPV1"   = "#B50800", 
-  "IPVC"   = "#FF8C00", "MCV1"   = "#2E7EBB", "RCV1"   = "#9E9E9E", 
-  "MCV2"   = "#FFB6C1", "YFV"    = "#5B4A9C", "MengA"  = "#C8A900", 
-  "HPVc"   = "#D45F9E"
-)
-
-# first data point per vaccine for labels
-first_points <- all_numerators %>%
-  group_by(Vaccine) %>%
-  filter(Year == min(Year)) %>%
-  ungroup()
-
-plt_all_numerators <- ggplot(all_numerators, aes(x = Year, y = ChildrenVaccinated, color = Vaccine)) +
-  geom_line(size = 0.8) +
-  scale_color_manual(values = vaccine_colors) +
-  ggrepel::geom_text_repel(
-    data = first_points, aes(label = Vaccine, color = Vaccine), fontface = "bold",
-    size = 2.5, show.legend = FALSE, direction = "y",
-    hjust = 1.2, nudge_x = -0.2, segment.color = NA
+plt_admin_vs_wuenic2 <- ggplot(gap_data2, aes(x = Year)) +
+  geom_hline(yintercept = 100, linetype = "dashed", color = "black", alpha = 1) +
+  geom_line(aes(y = `WHO/UNICEF`, linetype = "WHO/UNICEF"), color = source_colors["WHO/UNICEF"], linewidth = 0.9, alpha = 0.7) +
+  geom_line(aes(y = Admin, linetype = "Admin"), color = source_colors["Admin"], linewidth = 0.9, alpha = 0.7) +
+  #geom_point(data = gap_data2 %>% filter(flag_large_gap == TRUE), aes(y = Admin), color = "red", size = 1.7) +
+  geom_segment(data = gap_data2 %>% filter(flag_large_gap == TRUE),
+              aes(x = Year, xend = Year, y = Admin, yend = WUENIC),
+              color = "#ed6a64", linewidth = 0.8, alpha = 0.7) +
+  # geom_point(data = gap_data2 %>% filter(flag_large_gap == TRUE),
+  #            aes(y = Admin), color = "#ed6a64", size = 1) +
+  # geom_point(data = gap_data2 %>% filter(flag_large_gap == TRUE),
+  #            aes(y = WUENIC), color = "#ed6a64", size = 1) +
+  facet_wrap(~Vaccine) +
+  scale_linetype_manual(values = c("WHO/UNICEF" = "solid", "Admin" = "solid")) +
+  scale_y_continuous(
+    limits = c(floor(min(gap_data2$Admin,   na.rm = TRUE) / 25) * 25,
+               ceiling(max(gap_data2$Admin, na.rm = TRUE) / 10) * 10),
+    breaks = seq(0, 100, by = 25), , labels = scales::label_number(suffix = "%")
   ) +
-  scale_x_continuous(breaks = seq(min(all_numerators$Year), max(all_numerators$Year))) +
-  scale_y_continuous(limits = c(min(y_breaks_num), max(y_breaks_num)), breaks = y_breaks_num,
-                     labels = scales::label_number(scale_cut = scales::cut_short_scale())) +
+  scale_color_manual(values = c("FALSE" = "black", "TRUE" = "#ed6a64")) +
+  scale_x_continuous(breaks = seq(min(gap_data2$Year), max(gap_data2$Year), by = 2)) +
   theme_minimal() +
   labs(
-    title = paste0(get_text2("txt_label_num_vax2", text_vars), ", ", .current_country, ", ", min_yr_plots, "–", rev_yr),
-    x = t_lookup("axis_year", language), y = get_text2("txt_label_num_vax2", text_vars), color = t_lookup("tbl_schedule_vaccine", language)
+    title    = paste0("Admin vs. WHO/UNICEF Coverage Estimate, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
+    subtitle = paste0("Red lines indicate gaps > ", second_pct_threshold * 100, " percentage points"),
+    x = "Year", y = "Coverage (%)",
+    color = "Large Gap", linetype = "Source"
   ) +
   theme(
+    legend.position  = "bottom",
     axis.text.x      = element_text(angle = 45, hjust = 1, size = 8),
     axis.ticks.x     = element_line(color = "black"),
     axis.ticks.y     = element_line(color = "black"),
@@ -605,9 +390,61 @@ plt_all_numerators <- ggplot(all_numerators, aes(x = Year, y = ChildrenVaccinate
     strip.background = element_rect(fill = "#0083CF"),
     strip.text       = element_text(color = "white", face = "bold"),
     plot.title       = element_text(hjust = 0.5, size = 14),
-    panel.grid.minor   = element_blank()
+    plot.subtitle    = element_text(hjust = 0.5, size = 11)
   )
-plt_all_numerators
+plt_admin_vs_wuenic2
+
+## ---------------------------------------------------------------------------------------------------------------------
+### Plot: Admin coverage vs Official coverage — large gaps flagged (using wiise_admin_official)
+## ---------------------------------------------------------------------------------------------------------------------
+
+gap_data_2 <- wuenic_master_current %>%
+  mutate(
+    gap = Admin - Official,
+    flag_large_gap = abs(gap) > pct_threshold*100
+  ) %>% 
+   rename(`Official (Government Estimate)` = Official)
+
+plt_admin_vs_official <- ggplot(gap_data_2, aes(x = Year)) +
+  geom_line(aes(y = `Official (Government Estimate)`, linetype = "Official (Government Estimate)"), color = source_colors["Official (Government Estimate)"], linewidth = 0.9, alpha = 0.7) +
+  geom_line(aes(y = Admin,    linetype = "Admin"), color = source_colors["Admin"], linewidth = 0.9, alpha = 0.7) +
+  geom_hline(yintercept = 100, linetype = "dashed", color = "black", alpha = 1) +
+  #geom_point(data = gap_data_2 %>% filter(flag_large_gap == TRUE), aes(y = Admin), color = "red", size = 1.7) +
+  geom_segment(data = gap_data_2 %>% filter(flag_large_gap == TRUE),
+               aes(x = Year, xend = Year, y = Admin, yend = `Official (Government Estimate)`),
+               color = "#ed6a64", linewidth = 0.8, alpha = 0.7) +
+  # geom_point(data = gap_data_2 %>% filter(flag_large_gap == TRUE),
+  #            aes(y = Admin), color = "#ed6a64", size = 1) +
+  # geom_point(data = gap_data_2 %>% filter(flag_large_gap == TRUE),
+  #            aes(y = `Official (Government Estimate)`), color = "#ed6a64", size = 1) +
+  facet_wrap(~Vaccine) +
+  scale_y_continuous(
+    limits = c(floor(min(gap_data_2$Admin,   na.rm = TRUE) / 25) * 25,
+               ceiling(max(gap_data_2$Admin, na.rm = TRUE) / 10) * 10),
+    breaks = seq(0, 100, by = 25), , labels = scales::label_number(suffix = "%")
+  ) +
+  scale_linetype_manual(values = c("Official (Government Estimate)" = "solid", "Admin" = "solid")) +
+  scale_x_continuous(breaks = seq(min(gap_data_2$Year), max(gap_data_2$Year), by = 2)) +
+  theme_minimal() +
+  labs(
+    title = paste0("Admin vs. Official (Government Estimate) Coverage, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
+    subtitle = paste0("Red lines indicate gaps > ", pct_threshold * 100, " percentage points"),
+    x = "Year", y = "Coverage (%)",
+    linetype = "Source"
+  ) +
+  theme(
+    legend.position  = "bottom",
+    axis.text.x      = element_text(angle = 45, hjust = 1, size = 8),
+    axis.ticks.x     = element_line(color = "black"),
+    axis.ticks.y = element_line(color = "black"),
+    panel.border     = element_rect(color = "black", fill = NA, size = 0.6),
+    strip.background = element_rect(fill = "#0083CF"),
+    strip.text       = element_text(color = "white", face = "bold"),
+    plot.title       = element_text(hjust = 0.5, size = 14),
+    plot.subtitle    = element_text(hjust = 0.5, size = 11)
+  )
+plt_admin_vs_official
+
 
 ## ---------------------------------------------------------------------------------------------------------------------
 ### Plot: Year-to-year % change in numerator (# children vaccinated) flagged if over % threshold (pct_threshold)
@@ -730,67 +567,93 @@ if (length(vaccines_with_numerator_data) > 0) {
   plot_data_sufficient <- plot_data_numerators_all %>% filter(Vaccine %in% vaccines_with_numerator_data)
   stockout_sufficient  <- stockout_data %>% filter(Vaccine %in% vaccines_with_numerator_data)
   
-  plot_data_sufficient <- plot_data_sufficient %>%
-    dplyr::mutate(pct_color = dplyr::case_when(
-      abs(pct_change) > 10 ~ "high",
-      abs(pct_change) >= 5 ~ "mid",
-      !is.na(pct_change)   ~ "low"
-    ))
-  
   plt_perc_change_line <- local({
     
-    frozen_plot_data    <- plot_data_sufficient
-    frozen_stockout     <- stockout_sufficient
-    frozen_max_doses    <- max_doses_num
-    frozen_y_min        <- y_min_num
-    frozen_y_max        <- y_max_num
-    frozen_scale_factor <- max_doses_num / (y_max_num - y_min_num)
-    frozen_division     <- division_factor
-    frozen_pct_threshold <- pct_threshold
-    frozen_year_min     <- min(plot_data_sufficient$Year)
-    frozen_year_max     <- max(plot_data_sufficient$Year)
-    frozen_title        <- paste0(get_text2("txt_num_change_title", text_vars), ", ", .current_country, ", ", min_yr_plots, "–", rev_yr)
-    
-    raw_count_label <- get_text2("txt_raw_count", text_vars)
+    # freeze all values inside local scope
+    frozen_plot_data      <- plot_data_sufficient
+    frozen_stockout       <- stockout_sufficient
+    frozen_max_doses      <- max_doses_num
+    frozen_y_min          <- y_min_num
+    frozen_y_max          <- y_max_num
+    frozen_scale_factor   <- max_doses_num / (y_max_num - y_min_num)
+    frozen_division       <- division_factor
+    frozen_pct_threshold  <- pct_threshold
+    frozen_year_min       <- min(plot_data_sufficient$Year)
+    frozen_year_max       <- max(plot_data_sufficient$Year)
+    frozen_title          <- paste0("Year-to-Year % Change in Numerator (# Children Vaccinated), ", .current_country, ", ", min_yr_plots, "–", rev_yr)
+    frozen_subtitle       <- paste0("Line shows raw counts; points show % annual change\n",
+                                    "Red points indicate changes exceeding +/- ", pct_threshold * 100, "%\n",
+                                    "Orange shading indicates vaccine stockout")
     
     ggplot(frozen_plot_data, aes(x = Year)) +
-      geom_rect(data = frozen_stockout, aes(xmin = xmin_num, xmax = xmax_num, ymin = -Inf, ymax = Inf, fill = "Stockout"), alpha = 0.2, inherit.aes = FALSE) +
+      geom_rect(data = frozen_stockout,
+                aes(xmin = xmin_num, xmax = xmax_num, ymin = -Inf, ymax = Inf),
+                fill = "orange", alpha = 0.2, inherit.aes = FALSE) +
       geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
-      geom_line(aes(y = pct_change, group = Vaccine), color = "grey60", linewidth = 0.6, na.rm = TRUE) +
-      geom_point(aes(y = pct_change, color = pct_color), size = 1.75, na.rm = TRUE) +
-      geom_line(aes(y = (ChildrenVaccinated / frozen_max_doses) * (frozen_y_max - frozen_y_min) + frozen_y_min, group = Vaccine, linetype = raw_count_label), color = "#0058AB", linewidth = 0.8, alpha = 0.6) +
-      geom_point(aes(y = (ChildrenVaccinated / frozen_max_doses) * (frozen_y_max - frozen_y_min) + frozen_y_min), color = "#0058AB", size = 1.5, na.rm = TRUE) +
+      geom_hline(yintercept = c(frozen_pct_threshold * 100, -frozen_pct_threshold * 100),
+                 linetype = "dashed", color = "red", alpha = 1) +
+      geom_segment(aes(x = Year, xend = Year, y = 0, yend = pct_change),
+                   color = "grey60", na.rm = TRUE) +
+      geom_point(aes(y = pct_change, color = is_flagged), size = 1.75, na.rm = TRUE) +
+      geom_line(aes(y = (ChildrenVaccinated / frozen_max_doses) * (frozen_y_max - frozen_y_min) + frozen_y_min,
+                    group = Vaccine),
+                color = "#00833D", linewidth = 0.8, alpha = 0.6) +
+      geom_point(aes(y = (ChildrenVaccinated / frozen_max_doses) * (frozen_y_max - frozen_y_min) + frozen_y_min),
+                 color = "#00833D", size = 1.5, na.rm = TRUE) +
       facet_wrap(~Vaccine, scales = "fixed") +
       scale_y_continuous(
-        name = t_lookup("perc_change_previous", language), limits = c(frozen_y_min, frozen_y_max),
-        breaks = seq(frozen_y_min, frozen_y_max, length.out = frozen_division), labels = scales::label_number(suffix = "%", accuracy = 1),
-        sec.axis = sec_axis(trans = ~ (. - frozen_y_min) * frozen_scale_factor, name = t_lookup("num_vaccinated", language), labels = scales::label_number(scale_cut = scales::cut_short_scale()))
+        name   = "Year-to-Year % Change",
+        limits = c(frozen_y_min, frozen_y_max),
+        breaks = seq(frozen_y_min, frozen_y_max, length.out = frozen_division),
+        labels = scales::label_number(suffix = "%", accuracy = 1),
+        sec.axis = sec_axis(
+          trans  = ~ (. - frozen_y_min) * frozen_scale_factor,
+          name   = "# Children Vaccinated",
+          labels = scales::label_number(scale_cut = scales::cut_short_scale())
+        )
       ) +
-      scale_x_continuous(breaks = seq(frozen_year_min, frozen_year_max, by = 1), labels = function(x) ifelse(x %% 2 == 0, as.character(x), "")) +
+      scale_x_continuous(
+        breaks = seq(frozen_year_min, frozen_year_max, by = 1),
+        labels = function(x) ifelse(x %% 2 == 0, as.character(x), "")
+      ) +
       scale_color_manual(
-        name = NULL, values = c("low" = "#2CA02C", "mid" = "orange", "high" = "red"),
-        labels = c("low" = t_lookup("label_change_low", language), "mid" = t_lookup("label_change_mid", language), "high" = t_lookup("label_change_high", language)),
-        breaks = c("high", "mid", "low"), na.translate = FALSE
+        values = c("FALSE" = "black", "TRUE" = "red"),
+        labels = c(
+          "FALSE" = paste0("Change ≤ ±", frozen_pct_threshold * 100, "%"),
+          "TRUE"  = paste0("Change > ±", frozen_pct_threshold * 100, "%")
+        ),
+        na.translate = FALSE
       ) +
-      scale_linetype_manual(name = NULL, values = setNames("solid", raw_count_label), guide = guide_legend(order = 2, override.aes = list(color = "#0058AB", linewidth = 1))) +
-      scale_fill_manual(values = c("Stockout" = "orange"), labels = setNames(t_lookup("vaccine_stockout", language), "Stockout")) +
-      guides(color = guide_legend(title = NULL, order = 1), linetype = guide_legend(title = NULL, order = 2), fill = guide_legend(title = NULL, order = 3)) +
+      scale_fill_manual(values = c("Stockout" = "orange"), labels = c("Stockout" = "Vaccine Stockout")) +
+      guides(color = guide_legend(title = NULL), fill = guide_legend(title = NULL)) +
       theme_minimal() +
       theme(
-        axis.line.y.left = element_line(color = "black"), axis.text.x = element_text(angle = 45, hjust = 1, size = 6.5),
-        axis.text.y.left = element_text(color = "black", size = 7), axis.ticks.x = element_line(color = "black"),
-        axis.ticks.y = element_line(color = "black"), axis.line.y.right = element_line(color = "#0058AB"),
-        axis.text.y.right = element_text(color = "#0058AB", size = 8), axis.title.y.right = element_text(color = "#0058AB", size = 9),
-        panel.grid.minor = element_blank(), panel.border = element_rect(color = "black", fill = NA, linewidth = 0.6),
-        legend.position = "bottom", legend.box = "horizontal", strip.background = element_rect(fill = "#0083CF"),
-        strip.text = element_text(color = "white", face = "bold"), plot.title = element_text(hjust = 0.5, size = 14),
-        plot.subtitle = element_text(hjust = 0.5, size = 11), plot.caption = element_text(size = 9)
+        axis.line.y.left   = element_line(color = "black"),
+        axis.text.x        = element_text(angle = 45, hjust = 1, size = 6.5),
+        axis.text.y.left   = element_text(color = "black", size = 7),
+        axis.ticks.x       = element_line(color = "black"),
+        axis.ticks.y       = element_line(color = "black"),
+        axis.line.y.right  = element_line(color = "#00833D"),
+        axis.text.y.right  = element_text(color = "#00833D", size = 8),
+        axis.title.y.right = element_text(color = "#00833D", size = 9),
+        panel.grid.minor   = element_blank(),
+        panel.border       = element_rect(color = "black", fill = NA, linewidth = 0.6),
+        legend.position    = "bottom",
+        strip.background   = element_rect(fill = "#0083CF"),
+        strip.text         = element_text(color = "white", face = "bold"),
+        plot.title         = element_text(hjust = 0.5, size = 14),
+        plot.subtitle      = element_text(hjust = 0.5, size = 11)
       ) +
-      labs(title = frozen_title, caption = get_text2("txt_caption_missing_admin", text_vars), x = t_lookup("axis_year", language))
+      labs(
+        title    = frozen_title,
+        subtitle = frozen_subtitle,
+        x        = "Year"
+      )
   })
 } else {
   plt_perc_change_line <- ggplot() +
-    annotate("text", x = 0.5, y = 0.5,
+    annotate("text",
+             x = 0.5, y = 0.5,
              label = paste0("No vaccines with available numerator data for ", .current_country),
              color = "red", size = 6, hjust = 0.5, vjust = 0.5) +
     theme_void()
@@ -955,140 +818,89 @@ if (length(vaccines_with_denominator_data) > 0) {
   plot_data_sufficient <- denom_change_data %>% filter(Vaccine %in% vaccines_with_denominator_data)
   
   plt_denom_change <- local({
-    frozen_plot_data <- plot_data_sufficient
-    frozen_y_min <- y_min
-    frozen_y_max <- y_max
-    frozen_target_min <- target_min
-    frozen_target_max <- target_max
-    frozen_division <- division_factor
+    
+    frozen_plot_data    <- plot_data_sufficient
+    frozen_y_min        <- y_min
+    frozen_y_max        <- y_max
+    frozen_target_min   <- target_min
+    frozen_target_max   <- target_max
+    frozen_division     <- division_factor
     frozen_pct_threshold <- pct_threshold
     frozen_outlier_caption <- outlier_caption
-    frozen_year_min <- min(plot_data_sufficient$Year)
-    frozen_year_max <- max(plot_data_sufficient$Year)
-    frozen_title <- paste0(get_text2("txt_den_change_title", text_vars), ", ", .current_country, ", ", min_yr_plots, "–", rev_yr)
-    
-    target_pop_label <- get_text2("txt_target_pop", text_vars)
+    frozen_year_min     <- min(plot_data_sufficient$Year)
+    frozen_year_max     <- max(plot_data_sufficient$Year)
+    frozen_title        <- paste0("Year-to-Year % Change in Denominator (# Children in Target), ", .current_country, ", ", min_yr_plots, "–", rev_yr)
+    frozen_subtitle     <- paste0("Green line shows target population counts; points show % annual change\n",
+                                  "Red points indicate changes exceeding ±", pct_threshold * 100, "%\n",
+                                  "Orange shading indicates vaccine stockout")
     
     ggplot(frozen_plot_data, aes(x = Year)) +
       geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
-      geom_line(aes(y = pct_change_denom, group = Vaccine), color = "grey60", linewidth = 0.6, na.rm = TRUE) +
-      geom_point(aes(y = pct_change_denom, color = case_when(abs(pct_change_denom) > 10 ~ "high", abs(pct_change_denom) >= 5 ~ "mid", !is.na(pct_change_denom) ~ "low")), size = 2.5, na.rm = TRUE) +
-      geom_line(aes(y = target_scaled, group = Vaccine, linetype = target_pop_label), color = "#0058AB", linewidth = 0.8, alpha = 0.6, na.rm = TRUE) +
-      geom_point(aes(y = target_scaled), color = "#0058AB", size = 1.5, na.rm = TRUE) +
+      geom_hline(yintercept = c(frozen_pct_threshold * 100, -frozen_pct_threshold * 100),
+                 linetype = "dashed", color = "red", alpha = 1) +
+      geom_segment(aes(x = Year, xend = Year, y = 0, yend = pct_change_denom),
+                   color = "grey60", na.rm = TRUE) +
+      geom_point(aes(y = pct_change_denom, color = flag_denom_change), size = 1.75, na.rm = TRUE) +
+      geom_line(aes(y = target_scaled, group = Vaccine),
+                color = "#00833D", linewidth = 0.8, alpha = 0.6) +
+      geom_point(aes(y = target_scaled),
+                 color = "#00833D", size = 1.5, na.rm = TRUE) +
       facet_wrap(~Vaccine, scales = "fixed") +
       scale_y_continuous(
-        name = t_lookup("perc_change_previous", language), limits = c(frozen_y_min, frozen_y_max), breaks = seq(frozen_y_min, frozen_y_max, length.out = frozen_division), labels = scales::label_number(suffix = "%", accuracy = 1), 
-        sec.axis = sec_axis(trans = ~ (. - frozen_y_min) / (frozen_y_max - frozen_y_min) * (frozen_target_max - frozen_target_min) + frozen_target_min, name = target_pop_label, labels = scales::label_number(scale_cut = scales::cut_short_scale()))
+        name   = "Year-to-Year % Change",
+        limits = c(frozen_y_min, frozen_y_max),
+        breaks = seq(frozen_y_min, frozen_y_max, length.out = frozen_division),
+        labels = scales::label_number(suffix = "%", accuracy = 1),
+        sec.axis = sec_axis(
+          trans  = ~ (. - frozen_y_min) / (frozen_y_max - frozen_y_min) * (frozen_target_max - frozen_target_min) + frozen_target_min,
+          name   = "Children in Target Population",
+          labels = scales::label_number(scale_cut = scales::cut_short_scale())
+        )
       ) +
-      scale_x_continuous(breaks = seq(frozen_year_min, frozen_year_max, by = 1), labels = function(x) ifelse(x %% 2 == 0, as.character(x), "")) +
+      scale_x_continuous(
+        breaks = seq(frozen_year_min, frozen_year_max, by = 1),
+        labels = function(x) ifelse(x %% 2 == 0, as.character(x), "")
+      ) +
       scale_color_manual(
-        name = NULL, values = c("high" = "#E2231A", "mid" = "#Ff7f00", "low" = "#80BD41"), 
-        labels = c("high" = t_lookup("label_change_high", language), "mid" = t_lookup("label_change_mid", language), "low" = t_lookup("label_change_low", language)), breaks = c("high", "mid", "low"), na.translate = FALSE
+        values = c("FALSE" = "black", "TRUE" = "red"),
+        labels = c(
+          "FALSE" = paste0("Change ≤ ±", frozen_pct_threshold * 100, "%"),
+          "TRUE"  = paste0("Change > ±", frozen_pct_threshold * 100, "%")
+        ),
+        na.translate = FALSE
       ) +
-      scale_linetype_manual(name = NULL, values = setNames("solid", target_pop_label), guide = guide_legend(order = 2, override.aes = list(color = "#0058AB", linewidth = 1))) +
-      guides(color = guide_legend(title = NULL, order = 1), linetype = guide_legend(title = NULL, order = 2)) +
+      guides(color = guide_legend(title = NULL)) +
       theme_minimal() +
       theme(
-        axis.line.y.left = element_line(color = "black"), axis.text.x = element_text(angle = 45, hjust = 1, size = 6.5), axis.text.y.left = element_text(color = "black", size = 8), axis.ticks.x = element_line(color = "black"), axis.ticks.y = element_line(color = "black"), 
-        axis.line.y.right = element_line(color = "#0058AB"), axis.text.y.right = element_text(color = "#0058AB", size = 8), axis.title.y.right = element_text(color = "#0058AB", size = 9), panel.grid.minor = element_blank(), panel.border = element_rect(color = "black", fill = NA, linewidth = 0.6), 
-        legend.position = "bottom", legend.box = "horizontal", strip.background = element_rect(fill = "#0083CF"), strip.text = element_text(color = "white", face = "bold"), plot.title = element_text(hjust = 0.5, size = 14), plot.caption = element_text(size = 9)
+        axis.line.y.left   = element_line(color = "black"),
+        axis.text.x        = element_text(angle = 45, hjust = 1, size = 6.5),
+        axis.text.y.left   = element_text(color = "black", size = 8),
+        axis.ticks.x       = element_line(color = "black"),
+        axis.ticks.y       = element_line(color = "black"),
+        axis.line.y.right  = element_line(color = "#00833D"),
+        axis.text.y.right  = element_text(color = "#00833D", size = 8),
+        axis.title.y.right = element_text(color = "#00833D", size = 9),
+        panel.grid.minor   = element_blank(),
+        panel.border       = element_rect(color = "black", fill = NA, linewidth = 0.6),
+        legend.position    = "bottom",
+        strip.background   = element_rect(fill = "#0083CF"),
+        strip.text         = element_text(color = "white", face = "bold"),
+        plot.title         = element_text(hjust = 0.5, size = 14),
+        plot.subtitle      = element_text(hjust = 0.5, size = 11),
+        plot.caption       = element_text(size = 8, hjust = 0)
       ) +
-      labs(title = frozen_title, caption = paste0(frozen_outlier_caption, "\n\n", get_text2("txt_caption_missing_admin", text_vars)), x = t_lookup("axis_year", language))
+      labs(
+        title    = frozen_title,
+        subtitle = frozen_subtitle,
+        caption  = frozen_outlier_caption,
+        x        = "Year"
+      )
   })
-  # plt_denom_change <- local({
-  #   
-  #   frozen_plot_data    <- plot_data_sufficient
-  #   frozen_y_min        <- y_min
-  #   frozen_y_max        <- y_max
-  #   frozen_target_min   <- target_min
-  #   frozen_target_max   <- target_max
-  #   frozen_division     <- division_factor
-  #   frozen_pct_threshold <- pct_threshold
-  #   frozen_outlier_caption <- outlier_caption
-  #   frozen_year_min     <- min(plot_data_sufficient$Year)
-  #   frozen_year_max     <- max(plot_data_sufficient$Year)
-  #   frozen_title        <- paste0("Percent Change from Previous Year in Denominator (# Children in Target), ", .current_country, ", ", min_yr_plots, "–", rev_yr)
-  #   # frozen_subtitle     <- paste0("Green line shows target population counts; points show % annual change\n",
-  #   #                               "Red points indicate changes exceeding ±", pct_threshold * 100, "%\n",
-  #   #                               "Orange shading indicates vaccine stockout")
-  #   
-  #   ggplot(frozen_plot_data, aes(x = Year)) +
-  #     geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
-  #     geom_hline(yintercept = c(frozen_pct_threshold * 100, -frozen_pct_threshold * 100),
-  #                linetype = "dashed", color = "red", alpha = 1) +
-  #     geom_segment(aes(x = Year, xend = Year, y = 0, yend = pct_change_denom),
-  #                  color = "grey60", na.rm = TRUE) +
-  #     geom_point(aes(y = pct_change_denom, color = flag_denom_change), size = 1.75, na.rm = TRUE) +
-  #     geom_line(aes(y = target_scaled, group = Vaccine, linetype = "Raw Count of Children in Target Population"), color = "#00833D", linewidth = 0.8, alpha = 0.6) +
-  #     geom_point(aes(y = target_scaled), color = "#00833D", size = 1.5, na.rm = TRUE) +
-  #     facet_wrap(~Vaccine, scales = "fixed") +
-  #     scale_y_continuous(
-  #       name   = "Percent Change from Previous Year",
-  #       limits = c(frozen_y_min, frozen_y_max),
-  #       breaks = seq(frozen_y_min, frozen_y_max, length.out = frozen_division),
-  #       labels = scales::label_number(suffix = "%", accuracy = 1),
-  #       sec.axis = sec_axis(
-  #         trans  = ~ (. - frozen_y_min) / (frozen_y_max - frozen_y_min) * (frozen_target_max - frozen_target_min) + frozen_target_min,
-  #         name   = "Children in Target Population",
-  #         labels = scales::label_number(scale_cut = scales::cut_short_scale())
-  #       )
-  #     ) +
-  #     scale_x_continuous(
-  #       breaks = seq(frozen_year_min, frozen_year_max, by = 1),
-  #       labels = function(x) ifelse(x %% 2 == 0, as.character(x), "")
-  #     ) +
-  #     scale_color_manual(
-  #       values = c("FALSE" = "black", "TRUE" = "red"),
-  #       labels = c(
-  #         "FALSE" = paste0("Change ≤ ±", frozen_pct_threshold * 100, "%"),
-  #         "TRUE"  = paste0("Change > ±", frozen_pct_threshold * 100, "%")
-  #       ),
-  #       na.translate = FALSE
-  #     ) +
-  #     scale_linetype_manual(
-  #       name = NULL,
-  #       values = c("Raw Count of Children in Target Population" = "solid"),
-  #       guide = guide_legend(
-  #         order = 2, # Forces the green line legend entry to come first
-  #         override.aes = list(color = "#00833D", linewidth = 1) 
-  #       )
-  #     ) +
-  #     guides(
-  #       color = guide_legend(title = NULL, order = 1), # 1st: Black/Red percentage points
-  #       linetype = guide_legend(title = NULL, order = 2)  # 2nd: Green line
-  #     ) +
-  #     theme_minimal() +
-  #     theme(
-  #       axis.line.y.left   = element_line(color = "black"),
-  #       axis.text.x        = element_text(angle = 45, hjust = 1, size = 6.5),
-  #       axis.text.y.left   = element_text(color = "black", size = 8),
-  #       axis.ticks.x       = element_line(color = "black"),
-  #       axis.ticks.y       = element_line(color = "black"),
-  #       axis.line.y.right  = element_line(color = "#00833D"),
-  #       axis.text.y.right  = element_text(color = "#00833D", size = 8),
-  #       axis.title.y.right = element_text(color = "#00833D", size = 9),
-  #       panel.grid.minor   = element_blank(),
-  #       panel.border       = element_rect(color = "black", fill = NA, linewidth = 0.6),
-  #       legend.position    = "bottom",
-  #       legend.box         = "horizontal",
-  #       strip.background   = element_rect(fill = "#0083CF"),
-  #       strip.text         = element_text(color = "white", face = "bold"),
-  #       plot.title         = element_text(hjust = 0.5, size = 14),
-  #       plot.subtitle      = element_text(hjust = 0.5, size = 11),
-  #       plot.caption       = element_text(size = 9, hjust = 0)
-  #     ) +
-  #     labs(
-  #       title    = frozen_title,
-  #       #subtitle = frozen_subtitle,
-  #       caption  = paste0(frozen_outlier_caption, "\n\nGaps in line indicate missing admin data for that year."),
-  #       x        = t_lookup("axis_year", language)
-  #     )
-  # })
 } else {
  plt_denom_change <- ggplot() +
     annotate("text",
              x = 0.5, y = 0.5,
-             label = paste0(get_text2("txt_no_denom_avail_msg", text_vars), " ", .current_country),
+             label = paste0("No denominator data available for ", .current_country),
              color = "red", size = 6, hjust = 0.5, vjust = 0.5) +
     theme_void()
 }
@@ -1096,7 +908,7 @@ if (length(vaccines_with_denominator_data) > 0) {
 # ── APPEND NO-DATA NOTE TO CAPTION IF NEEDED ─────────────────────────────────
 if (length(vaccines_no_denominator_data) > 0) {
   no_data_note <- paste0(
-    get_text2("txt_note_no_denom_avail", text_vars), " ",
+    "NOTE: Not enough denominator data to calculate percent change for: ",
     paste(vaccines_no_denominator_data, collapse = ", ")
   )
   plt_denom_change <- plt_denom_change +
@@ -1166,7 +978,7 @@ plt_denom_change
 #   
 #   facet_wrap(~Vaccine) +
 #   scale_y_continuous(
-#     name = t_lookup("perc_change_previous", language), 
+#     name = "% Change from Previous Year", 
 #     limits = c(primary_min, primary_max), 
 #     labels = scales::percent_format(),
 #     sec.axis = sec_axis(
@@ -1219,31 +1031,27 @@ plt_denom_change
 # Reshape data: UNPD denominators (long format)
 births_vs_si_data <- wuenic_master_current %>%
   filter(Vaccine %in% c("BCG", "DTP1")) %>%
-  select(Year, Vaccine, BirthsUNPD, SurvivingInfantsUNPD, ChildrenInTarget)
+  select(Year, Vaccine, BirthsUNPD, SurvivingInfantsUNPD)
 
 # UNPD lines: one row per year
-if (nrow(births_vs_si_data) == 0) {
+if(nrow(births_vs_si_data) == 0) {
   message("Skipping ", .current_country, ": no UNPD denominator data available for BCG or DTP1")
   plt_births_vs_si <- NULL
 } else {
-  denominator_data <- births_vs_si_data %>%
-    select(Year, Vaccine, BirthsUNPD, SurvivingInfantsUNPD, ChildrenInTarget) %>%
+  unpd_data <- births_vs_si_data %>%
+    select(Year, Vaccine, BirthsUNPD, SurvivingInfantsUNPD) %>%
     pivot_longer(
-      cols = c(BirthsUNPD, SurvivingInfantsUNPD, ChildrenInTarget),
+      cols = c(BirthsUNPD, SurvivingInfantsUNPD),
       names_to  = "target_grp",
       values_to = "Population"
     ) %>%
-    # 1. Swapped && for & here
     mutate(target_grp = case_when(
       target_grp == "BirthsUNPD" ~ "Live Births (UNPD)",
-      target_grp == "SurvivingInfantsUNPD" ~ "Surviving Infants (UNPD)",
-      target_grp == "ChildrenInTarget" & Vaccine == "BCG" ~ "BCG Admin Target Population",
-      target_grp == "ChildrenInTarget" & Vaccine == "DTP1" ~ "DTP1 Admin Target Population",
-      TRUE ~ target_grp
+      target_grp == "SurvivingInfantsUNPD" ~ "Surviving Infants (UNPD)"
     )) %>%
     filter(
-      (Vaccine == "BCG" & target_grp %in% c("Live Births (UNPD)", "BCG Admin Target Population")) |
-        (Vaccine == "DTP1" & target_grp %in% c("Surviving Infants (UNPD)", "DTP1 Admin Target Population"))
+      (Vaccine == "BCG" & target_grp == "Live Births (UNPD)") |
+        (Vaccine == "DTP1" & target_grp == "Surviving Infants (UNPD)")
     )
 }
 
@@ -1269,12 +1077,12 @@ availability_footnote <- if (!bcg_unpd_available && !si_unpd_available) {
 }
 
 # --- Y-axis limits for single data point edge case ---
-data_available <- denominator_data %>%
+data_available <- unpd_data %>%
   filter(!is.na(Population)) %>%
   nrow()
 
 if (data_available == 1) {
-  single_value    <- denominator_data$Population[!is.na(denominator_data$Population)][1]
+  single_value    <- unpd_data$Population[!is.na(unpd_data$Population)][1]
   step_magnitude  <- 10^floor(log10(single_value) - 0.5)
   y_min           <- max(0, floor((single_value * 0.5) / step_magnitude) * step_magnitude)
   y_max           <- ceiling((single_value * 1.5) / step_magnitude) * step_magnitude
@@ -1283,55 +1091,27 @@ if (data_available == 1) {
   y_max <- NULL
 }
 
-# set order
-denominator_data$target_grp <- factor(denominator_data$target_grp, levels = c("Live Births (UNPD)", "BCG Admin Target Population", 
-                                                                              "Surviving Infants (UNPD)", "DTP1 Admin Target Population"))
-
 # --- Plot ---
-lbl_births  <- get_text2("txt_live_births", text_vars)
-lbl_surv_inf <- get_text2("txt_surviving_infants", text_vars)
-lbl_bcg_tgt  <- get_text2("txt_bcg_target", text_vars)
-lbl_dtp1_tgt <- get_text2("txt_dtp1_target", text_vars)
-
-# map categories
-denominator_data <- denominator_data %>%
-  mutate(target_grp = case_when(
-    target_grp == "Live Births (UNPD)" ~ lbl_births,
-    target_grp == "Surviving Infants (UNPD)" ~ lbl_surv_inf,
-    target_grp == "BCG Admin Target Population" ~ lbl_bcg_tgt,
-    target_grp == "DTP1 Admin Target Population" ~ lbl_dtp1_tgt,
-    TRUE ~ target_grp
-  ))
-
-# plot
-plt_births_vs_si <- ggplot(denominator_data, aes(x = Year, y = Population, color = target_grp)) +
+plt_births_vs_si <- ggplot(unpd_data, aes(x = Year, y = Population, color = target_grp)) +
   geom_line(linewidth = 0.9) +
   geom_point(size = 2) +
-  scale_y_continuous(labels = scales::label_number(scale_cut = scales::cut_short_scale()), limits = if (!is.null(y_min)) c(y_min, y_max) else NULL) +
-  scale_x_continuous(breaks = seq(min(denominator_data$Year), max(denominator_data$Year), by = 1)) +
-  scale_color_manual(
-    values = setNames(
-      c("#E2231A", "#0058AB", "#f4a4a0", "#349cff"),
-      c(lbl_births, lbl_surv_inf, lbl_bcg_tgt, lbl_dtp1_tgt)
-    )
-  ) +
+  scale_y_continuous(labels = scales::label_number(scale_cut = scales::cut_short_scale()),
+                     limits = if (!is.null(y_min)) c(y_min, y_max) else NULL) +
+  scale_x_continuous(breaks = seq(min(unpd_data$Year), max(unpd_data$Year), by = 1)) +
+  scale_color_manual(values = c("Live Births (UNPD)" = "#E87722", "Surviving Infants (UNPD)" = "#0083CF")) +
   theme_minimal() +
-  labs(
-    title = paste0(get_text2("txt_title_births_si", text_vars), ", ", .current_country, ", ", min_yr_plots, "–", rev_yr),
-    x = t_lookup("axis_year", language), 
-    y = get_text2("txt_target_population", text_vars),
-    color = get_text2("txt_denominator", text_vars),
-    caption = availability_footnote
-  ) +
+  labs(title = paste0("Live Births & Surviving Infants (UNPD) vs Admin Denominators, ",
+                      .current_country, ", ", min_yr_plots, "–", rev_yr),
+       x = "Year", y = "Target Population", color = "Denominator", caption = availability_footnote) +
   theme(
     legend.position = "bottom",
-    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.6),
-    plot.title = element_text(hjust = 0.5, size = 14),
-    plot.subtitle = element_text(hjust = 0.5, size = 11),
-    axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
-    axis.ticks.x = element_line(color = "black"),
-    axis.ticks.y = element_line(color = "black"),
-    plot.caption = element_text(color = "red", size = 12),
+    panel.border    = element_rect(color = "black", fill = NA, linewidth = 0.6),
+    plot.title      = element_text(hjust = 0.5, size = 14),
+    plot.subtitle   = element_text(hjust = 0.5, size = 11),
+    axis.text.x     = element_text(angle = 45, hjust = 1, size = 8),
+    axis.ticks.x    = element_line(color = "black"),
+    axis.ticks.y    = element_line(color = "black"),
+    plot.caption    = element_text(color = "red", size = 12),
     panel.grid.minor.x = element_blank()
   )
 
@@ -1342,101 +1122,58 @@ plt_births_vs_si <- ggplot(denominator_data, aes(x = Year, y = Population, color
 denom_types_data <- wuenic_master_current %>%
   filter(Vaccine %in% c("BCG", "DTP1")) %>%
   mutate(DenomType = case_when(Vaccine == "BCG" ~ "Live Births", Vaccine == "DTP1" ~ "Surviving Infants")) %>%
-  select(Country, Vaccine, Year, DenomType, ChildrenInTarget) %>%
-  group_by(Vaccine) %>%
-  arrange(Vaccine, Year) %>%
+  group_by(DenomType) %>%
+  arrange(Year) %>%
   mutate(
-    prev_denominator = lag(ChildrenInTarget),
-    pct_change_denom = (ChildrenInTarget - prev_denominator) / prev_denominator,
+    UNPD_value = case_when(DenomType == "Live Births" ~ BirthsUNPD, DenomType == "Surviving Infants" ~ SurvivingInfantsUNPD),
+    prev_unpd = lag(UNPD_value),
+    pct_change_denom = (UNPD_value - prev_unpd) / prev_unpd,
     flag_denom_change = abs(pct_change_denom) > pct_threshold
-  # ) %>%
-  # ungroup()
-  ) %>% 
-  mutate(DenomType = case_when(
-    Vaccine == "BCG" ~ "Live Births (BCG)",
-    Vaccine == "DTP1" ~ "Surviving Infants (DTP1)",
-    TRUE ~ DenomType
-  ))
+  ) %>%
+  ungroup()
 
 y_limit_dt <- max(abs(denom_types_data$pct_change_denom), na.rm = TRUE)
 if(y_limit_dt == 0 || is.na(y_limit_dt)) y_limit_dt <- 0.1
 primary_max_dt <- y_limit_dt
 primary_min_dt <- -y_limit_dt
-sec_max_dt <- max(denom_types_data$ChildrenInTarget, na.rm = TRUE)
+sec_max_dt <- max(denom_types_data$UNPD_value, na.rm = TRUE)
 scale_dt <- sec_max_dt / (primary_max_dt - primary_min_dt)
 offset_dt <- sec_max_dt - (scale_dt * primary_max_dt)
 
-denom_data_available <- denom_types_data %>% filter(!is.na(ChildrenInTarget)) %>% nrow() > 1
+denom_data_available <- denom_types_data %>% filter(!is.na(UNPD_value)) %>% nrow() > 1
 
 if(denom_data_available) {
   plt_denom_pct_change <- local({
-    
-    frozen_data <- denom_types_data %>%
-      dplyr::mutate(pct_color = dplyr::case_when(
-        abs(pct_change_denom) > pct_threshold ~ "high",
-        abs(pct_change_denom) >= pct_threshold * 0.5 ~ "mid",
-        !is.na(pct_change_denom) ~ "low"
-      ))
-    frozen_year_min <- min(denom_types_data$Year)
-    frozen_year_max <- max(denom_types_data$Year)
-    
-    ggplot(frozen_data, aes(x = Year)) +
+    ggplot(denom_types_data, aes(x = Year)) +
       geom_hline(yintercept = 0, color = "black") +
-      #geom_hline(yintercept = c(pct_threshold, -pct_threshold), linetype = "dashed", color = "red", alpha = 0.5) +
-      geom_vline(xintercept = seq(frozen_year_min, frozen_year_max, by = 1), color = "grey90", linewidth = 0.3) +
-      geom_line(aes(y = pct_change_denom, group = DenomType), color = "grey60", linewidth = 0.6, na.rm = TRUE) +
-      geom_point(aes(y = pct_change_denom, color = pct_color), size = 2.5, na.rm = TRUE) +
-      geom_line(aes(y = (ChildrenInTarget - offset_dt) / scale_dt, group = DenomType, linetype = "Raw Denominator Count"),
-                color = "#0058AB", linewidth = 0.8, alpha = 0.6, na.rm = TRUE) +
-      geom_point(aes(y = (ChildrenInTarget - offset_dt) / scale_dt), color = "#0058AB", size = 1.5, na.rm = TRUE) +
+      geom_hline(yintercept = c(pct_threshold, -pct_threshold), linetype = "dashed", color = "red", alpha = 0.5) +
+      geom_segment(aes(x = Year, xend = Year, y = 0, yend = pct_change_denom), color = "grey60") +
+      geom_point(aes(y = pct_change_denom, color = flag_denom_change), size = 3) +
+      geom_line(aes(y = (UNPD_value - offset_dt) / scale_dt, group = DenomType), color = "#00833D", linewidth = 1, alpha = 0.5) +
       facet_wrap(~DenomType) +
       scale_y_continuous(
-        name = t_lookup("perc_change_previous", language),
+        name = "% Change from Previous Year",
         limits = c(primary_min_dt, primary_max_dt),
         labels = scales::percent_format(),
-        sec.axis = sec_axis(~ . * scale_dt + offset_dt, name = "Raw Denominator Count",
-                            labels = scales::label_number(scale_cut = scales::cut_short_scale()))
+        sec.axis = sec_axis(~ . * scale_dt + offset_dt, name = "Raw Denominator Count", labels = scales::label_number(scale_cut = scales::cut_short_scale()))
       ) +
-      scale_x_continuous(
-        breaks = seq(frozen_year_min, frozen_year_max, by = 1),
-        labels = function(x) ifelse(x %% 2 == 0, as.character(x), "")
-      ) +
-      scale_color_manual(
-        name = NULL,
-        values = c("low" = "#80BD41", "mid" = "#Ff7f00", "high" = "#E2231A"),
-        labels = c("low" = "Change 0–5%", "mid" = "Change 5–10%", "high" = "Change > 10%"),
-        breaks = c("high", "mid", "low"), na.translate = FALSE
-      ) +
-      scale_linetype_manual(
-        name = NULL,
-        values = c("Raw Denominator Count" = "solid"),
-        guide = guide_legend(order = 2, override.aes = list(color = "#0058AB", linewidth = 1))
-      ) +
-      guides(
-        color    = guide_legend(title = NULL, order = 1),
-        linetype = guide_legend(title = NULL, order = 2)
-      ) +
+      scale_color_manual(values = c("FALSE" = "black", "TRUE" = "red")) +
       theme_minimal() +
       theme(
-        legend.position    = "bottom", legend.box = "horizontal",
-        panel.border       = element_rect(color = "black", fill = NA, linewidth = 0.6),
-        panel.grid.major.x = element_blank(),
-        panel.grid.minor   = element_blank(),
-        strip.background   = element_rect(fill = "#0083CF"),
-        strip.text         = element_text(color = "white", face = "bold"),
-        axis.title.y.right = element_text(color = "#0058AB"),
-        axis.text.y.right  = element_text(color = "#0058AB"),
-        axis.line.y.right  = element_line(color = "#0058AB"),
-        axis.ticks.x       = element_line(color = "black"),
-        axis.ticks.y       = element_line(color = "black"),
-        axis.text.x        = element_text(angle = 45, hjust = 1, size = 8),
-        plot.title         = element_text(hjust = 0.5, size = 14),
-        plot.subtitle      = element_text(hjust = 0.5, size = 11)
+        legend.position = "none",
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 0.6),
+        strip.background = element_rect(fill = "#0083CF"),
+        strip.text = element_text(color = "white", face = "bold"),
+        axis.title.y.right = element_text(color = "#00833D"),
+        axis.text.y.right = element_text(color = "#00833D"),
+        axis.ticks.x = element_line(color = "black"),
+        axis.ticks.y = element_line(color = "black"),
+        plot.title = element_text(hjust = 0.5, size = 14),
+        plot.subtitle = element_text(hjust = 0.5, size = 11),
       ) +
       labs(
-        title    = paste0("Admin Denominator Stability Check, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
-        x        = t_lookup("axis_year", language),
-        caption  = "Gaps in line indicate missing data for that year."
+        title = paste0("Denominator Stability Check, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
+        subtitle = paste0("Points show % annual change (UNPD)\nRed points indicate changes exceeding +/- ", pct_threshold * 100, "%")
       )
   })
 } else {
@@ -1507,8 +1244,9 @@ plt_dropout_with_rate <- ggplot() +
   # admin coverage
   geom_line(data = dropout_long, aes(x = Year, y = Admin, color = Vaccine), linewidth = 0.9, alpha = 0.7) +
   geom_point(data = dropout_long, aes(x = Year, y = Admin, color = Vaccine), size = 2) +
-  geom_col(data = dropout_rates, aes(x = Year, y = dropout_pct, fill = "Dropout Rate"), 
-           alpha = 0.3, width = 0.5) +
+  
+  # dropout % as bars
+  geom_col(data = dropout_rates, aes(x = Year, y = dropout_pct), fill = "grey50", alpha = 0.3, width = 0.5) +
   
   geom_hline(yintercept = 100, linetype = "dashed", color = "black", alpha = 1) +
   facet_wrap(~pair, scales = "free_y") +
@@ -1518,25 +1256,15 @@ plt_dropout_with_rate <- ggplot() +
   ) +
   scale_x_continuous(breaks = seq(min(dropout_long$Year), max(dropout_long$Year), by = 2)) +
   scale_color_manual(values = unicef_colors) +
-  scale_fill_manual(
-    name = NULL,
-    values = c("Dropout Rate" = "#6b6b6b"),
-    guide = guide_legend(
-      order = 2,
-      override.aes = list(alpha = 0.3)
-    )
-  ) +
-  guides(color = guide_legend(title = t_lookup("tbl_schedule_vaccine", language), order = 1), fill = guide_legend(title = NULL, order = 2)) +
   theme_minimal() +
   labs(
     title = paste0("Key Vaccine Dropout, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
     subtitle = "Lines = Admin Coverage | Bars = Dropout %",
-    x = t_lookup("axis_year", language), y = "Admin Coverage / Dropout %",
+    x = "Year", y = "Admin Coverage / Dropout %",
     caption = "Dropout % = (Dose 1 - Dose 2) / Dose 1 * 100"
   ) +
   theme(
     legend.position = "bottom",
-    legend.box = "horizontal",
     strip.background = element_rect(fill = "#0083CF"),
     strip.text = element_text(color = "white", face = "bold"),
     panel.border = element_rect(color = "black", fill = NA, linewidth = 0.6),
@@ -1567,9 +1295,9 @@ plt_coadmin_dtp_pcv <- ggplot(selected_coadmin, aes(x = Year, y = Admin, color =
   theme_minimal() +
   labs(
     title = paste0("Admin Coverage of DTP3 and PCVC (Co-administered), ", .current_country, ", ", min_yr_plots, "–", rev_yr),
-    x = t_lookup("axis_year", language), 
-    y = t_lookup("axis_admin_coverage_pct", language),
-    color = t_lookup("tbl_schedule_vaccine", language)
+    x = "Year", 
+    y = "Admin Coverage (%)",
+    color = "Vaccine"
   ) +
   theme(
     legend.position = "bottom",
@@ -1755,7 +1483,7 @@ plt_coadmin_list <- purrr::imap(coadmin_pairs, function(vaccines, cluster_name) 
     theme_minimal() +
     labs(
       title = paste0("Admin Coverage of Vaccines Administered at ", cluster_name, " visit, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
-      x = t_lookup("axis_year", language), y = t_lookup("axis_admin_coverage_pct", language), color = t_lookup("tbl_schedule_vaccine", language)) +
+      x = "Year", y = "Admin Coverage (%)", color = "Vaccine") +
     theme(
       legend.position  = "bottom",
       axis.text.x      = element_text(angle = 45, hjust = 1, size = 8),
@@ -1834,11 +1562,11 @@ make_numerator_plot <- function(plot_data, time_point) {
         theme_void() +
         labs(
           title = paste0(
-            get_text2("txt_num_change_title", text_vars), ", ",
+            "Year-to-Year % Change in Numerator (# Children Vaccinated), ",
             .current_country, ", ", min_yr_plots, "–", rev_yr,
             "\nVaccines Administered at ", time_point, " visit"
           ),
-          subtitle = "Insufficient data for percent change from previous year calculation"
+          subtitle = "Insufficient data for year-to-year % change calculation"
         ) +
         theme(
           plot.title    = element_text(hjust = 0.5, size = 14),
@@ -1864,140 +1592,81 @@ make_numerator_plot <- function(plot_data, time_point) {
   current_stockout <- stockout_data %>% filter(Vaccine %in% current_vax)
   
   # ── PLOT ─────────────────────────────────────────────────────────────────────
-  # 1. Store the translated raw count string first so it perfectly matches across layers
-  raw_count_label <- get_text2("txt_raw_count", text_vars)
-  
   numerator_plot <- ggplot(plot_data, aes(x = Year)) +
-    geom_rect(data = current_stockout, aes(xmin = xmin_num, xmax = xmax_num, ymin = -Inf, ymax = Inf, fill = "Stockout"),
-              alpha = 0.2, inherit.aes = FALSE) +
-    geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
-    geom_line(aes(y = pct_change, group = Vaccine), color = "grey60", linewidth = 0.6, na.rm = TRUE) +
-    geom_point(aes(y = pct_change, color = case_when(abs(pct_change) > 10 ~ "high", abs(pct_change) >= 5 ~ "mid", !is.na(pct_change) ~ "low")), size = 2.5, na.rm = TRUE) +
-    geom_line(aes(y = (ChildrenVaccinated / max_doses) * (y_max - y_min) + y_min, group = Vaccine, linetype = raw_count_label), 
-              color = "#0058AB", linewidth = 0.8, alpha = 0.6, na.rm = TRUE) +
-    geom_point(aes(y = (ChildrenVaccinated / max_doses) * (y_max - y_min) + y_min), color = "#0058AB", size = 1.5, na.rm = TRUE) +
-    facet_wrap(~Vaccine, scales = "fixed", drop = TRUE) +
-    scale_y_continuous(name = t_lookup("perc_change_previous", language), limits = c(y_min, y_max), 
-                       labels = scales::label_number(suffix = "%", accuracy = 1), 
-                       sec.axis = sec_axis(trans = ~ (. - y_min) * scale_factor, name = t_lookup("num_vaccinated", language), 
-                                           labels = scales::label_number(scale_cut = scales::cut_short_scale()))) +
-    scale_x_continuous(breaks = seq(min(plot_data$Year), max(plot_data$Year), by = 1), 
-                       labels = function(x) ifelse(x %% 2 == 0, as.character(x), "")) +
-    scale_color_manual(name = NULL, values = c("high" = "#E2231A", "mid" = "#Ff7f00", "low" = "#80BD41"), 
-                       labels = c("high" = t_lookup("label_change_high", language),
-                                  "mid"  = t_lookup("label_change_mid", language),
-                                  "low"  = t_lookup("label_change_low", language)),
-                       breaks = c("high", "mid", "low"), na.translate = FALSE) +
-    scale_linetype_manual(name = NULL, values = setNames("solid", raw_count_label), 
-                          guide = guide_legend(order = 2, override.aes = list(color = "#0058AB", linewidth = 1))) +
-    scale_fill_manual(values = c("Stockout" = "orange"), labels = setNames(t_lookup("vaccine_stockout", language), "Stockout")) +
     
-    guides(color = guide_legend(title = NULL, order = 1), linetype = guide_legend(title = NULL, order = 2), fill = guide_legend(title = NULL, order = 3)) +
+    # stockout shading (behind everything)
+    geom_rect(data = current_stockout, aes(xmin = xmin_num, xmax = xmax_num, ymin = -Inf, ymax = Inf),
+              fill = "orange", alpha = 0.2, inherit.aes = FALSE) +
+    geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
+    geom_hline(yintercept = c(pct_threshold * 100, -pct_threshold * 100),
+               linetype = "dashed", color = "red", alpha = 1) +
+    # layer 1: % change lollipops (primary axis) — outlier NAs silently dropped
+    geom_segment(aes(x = Year, xend = Year, y = 0, yend = pct_change),
+                 color = "grey60", na.rm = TRUE) +
+    geom_point(aes(y = pct_change, color = is_flagged), size = 2.5, na.rm = TRUE) +
+    # layer 2: raw counts scaled to primary axis — 0 anchors to y_min, max_doses to y_max
+    geom_line(aes(y = (ChildrenVaccinated / max_doses) * (y_max - y_min) + y_min,
+                  group = Vaccine), color = "#00833D", linewidth = 0.8, alpha = 0.6) +
+    geom_point(aes(y = (ChildrenVaccinated / max_doses) * (y_max - y_min) + y_min),
+               color = "#00833D", size = 1.5, na.rm = TRUE) +
+    facet_wrap(~Vaccine, scales = "fixed", drop = TRUE) +
+    scale_y_continuous(
+      name   = "Year-to-Year % Change",
+      limits = c(y_min, y_max),
+      labels = scales::label_number(suffix = "%", accuracy = 1),
+      sec.axis = sec_axis(
+        trans  = ~ (. - y_min) * scale_factor,  # y_min → 0, y_max → max_doses
+        name   = "# Children Vaccinated",
+        labels = scales::label_number(scale_cut = scales::cut_short_scale())
+      )
+    ) +
+    scale_x_continuous(
+      breaks = seq(min(plot_data$Year), max(plot_data$Year), by = 1),
+      labels = function(x) ifelse(x %% 2 == 0, as.character(x), "")
+    ) +
+    scale_color_manual(
+      values = c("FALSE" = "black", "TRUE" = "red"),
+      labels = c(
+        "FALSE" = paste0("Change ≤ ±", pct_threshold * 100, "%"),
+        "TRUE"  = paste0("Change > ±", pct_threshold * 100, "%")
+      ),
+      na.translate = FALSE
+    ) +
+    scale_fill_manual(
+      values = c("Stockout" = "orange"),
+      labels = c("Stockout" = "Vaccine Stockout")
+    ) +
+    guides(color = guide_legend(title = NULL), fill = guide_legend(title = NULL)) +
     theme_minimal() +
-    theme(axis.line.y.left = element_line(color = "black"), 
-          axis.text.x = element_text(angle = 45, hjust = 1, size = 8), 
-          axis.ticks.x = element_line(color = "black"), 
-          axis.ticks.y = element_line(color = "black"), 
-          axis.line.y.right = element_line(color = "#0058AB"), 
-          axis.text.y.right = element_text(color = "#0058AB", size = 8), 
-          axis.title.y.right = element_text(color = "#0058AB", size = 9), 
-          panel.grid.minor = element_blank(), 
-          panel.border = element_rect(color = "black", fill = NA, linewidth = 0.6), 
-          legend.position = "bottom", legend.box = "horizontal", 
-          strip.background = element_rect(fill = "#0083CF"), strip.text = element_text(color = "white", face = "bold"), 
-          plot.title = element_text(hjust = 0.5, size = 14), 
-          plot.subtitle = element_text(hjust = 0.5, size = 11),
-          plot.caption = element_text(size = 9)) +
-    labs(title = paste0(get_text2("txt_num_change_title", text_vars), ", ", .current_country, ", ", min_yr_plots, "–", rev_yr, "\nVaccines Administered at ", time_point, " visit"), 
-         x = t_lookup("axis_year", language),
-         caption = get_text2("txt_caption_missing_admin", text_vars))
-  
-  # numerator_plot <- ggplot(plot_data, aes(x = Year)) +
-  #   geom_rect(data = current_stockout, aes(xmin = xmin_num, xmax = xmax_num, ymin = -Inf, ymax = Inf),
-  #             fill = "orange", alpha = 0.2, inherit.aes = FALSE) +
-  #   geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
-  #   geom_hline(yintercept = c(pct_threshold * 100, -pct_threshold * 100),
-  #              linetype = "dashed", color = "red", alpha = 1) +
-  #   geom_segment(aes(x = Year, xend = Year, y = 0, yend = pct_change),
-  #                color = "grey60", na.rm = TRUE) +
-  #   geom_point(aes(y = pct_change, color = is_flagged), size = 2.5, na.rm = TRUE) +
-  #   geom_line(aes(y = (ChildrenVaccinated / max_doses) * (y_max - y_min) + y_min,
-  #                 group = Vaccine,
-  #                 linetype = "Raw Count of Children Vaccinated"), 
-  #             color = "#00833D", linewidth = 0.8, alpha = 0.6) +
-  #   geom_point(aes(y = (ChildrenVaccinated / max_doses) * (y_max - y_min) + y_min),
-  #              color = "#00833D", size = 1.5, na.rm = TRUE) +
-  #   facet_wrap(~Vaccine, scales = "fixed", drop = TRUE) +
-  #   scale_y_continuous(
-  #     name   = t_lookup("perc_change_previous", language),
-  #     limits = c(y_min, y_max),
-  #     labels = scales::label_number(suffix = "%", accuracy = 1),
-  #     sec.axis = sec_axis(
-  #       trans  = ~ (. - y_min) * scale_factor,  # y_min → 0, y_max → max_doses
-  #       name   = t_lookup("num_vaccinated", language),
-  #       labels = scales::label_number(scale_cut = scales::cut_short_scale())
-  #     )
-  #   ) +
-  #   scale_x_continuous(
-  #     breaks = seq(min(plot_data$Year), max(plot_data$Year), by = 1),
-  #     labels = function(x) ifelse(x %% 2 == 0, as.character(x), "")
-  #   ) +
-  #   scale_color_manual(
-  #     values = c("FALSE" = "black", "TRUE" = "red"),
-  #     labels = c(
-  #       "FALSE" = paste0("Change ≤ ±", pct_threshold * 100, "%"),
-  #       "TRUE"  = paste0("Change > ±", pct_threshold * 100, "%")
-  #     ),
-  #     na.translate = FALSE
-  #   ) +
-  #   scale_linetype_manual(
-  #     name = NULL,
-  #     values = c("Raw Counts of Children Vaccinated" = "solid"),
-  #     guide = guide_legend(
-  #       order = 2,
-  #       override.aes = list(color = "#00833D", linewidth = 1)
-  #     )
-  #   ) +
-  #   scale_fill_manual(
-  #     values = c("Stockout" = "orange"),
-  #     labels = c("Stockout" = "Vaccine Stockout")
-  #   ) +
-  #   guides(
-  #     color    = guide_legend(title = NULL, order = 1),  # First: Points (Black/Red)
-  #     linetype = guide_legend(title = NULL, order = 2),  # Second: Line (Green)
-  #     fill     = guide_legend(title = NULL, order = 3)   # Third: Shading (Orange Box)
-  #   ) +
-  #   theme_minimal() +
-  #   theme(
-  #     axis.line.y.left   = element_line(color = "black"),
-  #     axis.text.x        = element_text(angle = 45, hjust = 1, size = 8),
-  #     axis.ticks.x       = element_line(color = "black"),
-  #     axis.ticks.y       = element_line(color = "black"),
-  #     axis.line.y.right  = element_line(color = "#00833D"),
-  #     axis.text.y.right  = element_text(color = "#00833D", size = 8),
-  #     axis.title.y.right = element_text(color = "#00833D", size = 9),
-  #     panel.grid.minor   = element_blank(),
-  #     panel.border       = element_rect(color = "black", fill = NA, linewidth = 0.6),
-  #     legend.position    = "bottom",
-  #     legend.box         = "horizontal",
-  #     strip.background   = element_rect(fill = "#0083CF"),
-  #     strip.text         = element_text(color = "white", face = "bold"),
-  #     plot.title         = element_text(hjust = 0.5, size = 14),
-  #     plot.subtitle      = element_text(hjust = 0.5, size = 11)
-  #   ) +
-  #   labs(
-  #     title = paste0(
-  #       "Percent Change from Previous Year in Numerator (# Children Vaccinated), ",
-  #       .current_country, ", ", min_yr_plots, "–", rev_yr,
-  #       "\nVaccines Administered at ", time_point, " visit"
-  #     ),
-  #     # subtitle = paste0(
-  #     #   "Line shows raw counts; points show % annual change\n",
-  #     #   "Red points indicate changes exceeding +/- ", pct_threshold * 100, "%\n",
-  #     #   "Orange shading indicates vaccine stockout"
-  #     # ),
-  #     x = t_lookup("axis_year", language)
-  #   )
+    theme(
+      axis.line.y.left   = element_line(color = "black"),
+      axis.text.x        = element_text(angle = 45, hjust = 1, size = 8),
+      axis.ticks.x       = element_line(color = "black"),
+      axis.ticks.y       = element_line(color = "black"),
+      axis.line.y.right  = element_line(color = "#00833D"),
+      axis.text.y.right  = element_text(color = "#00833D", size = 8),
+      axis.title.y.right = element_text(color = "#00833D", size = 9),
+      panel.grid.minor   = element_blank(),
+      panel.border       = element_rect(color = "black", fill = NA, linewidth = 0.6),
+      legend.position    = "bottom",
+      strip.background   = element_rect(fill = "#0083CF"),
+      strip.text         = element_text(color = "white", face = "bold"),
+      plot.title         = element_text(hjust = 0.5, size = 14),
+      plot.subtitle      = element_text(hjust = 0.5, size = 11)
+    ) +
+    labs(
+      title = paste0(
+        "Year-to-Year % Change in Numerator (# Children Vaccinated), ",
+        .current_country, ", ", min_yr_plots, "–", rev_yr,
+        "\nVaccines Administered at ", time_point, " visit"
+      ),
+      subtitle = paste0(
+        "Line shows raw counts; points show % annual change\n",
+        "Red points indicate changes exceeding +/- ", pct_threshold * 100, "%\n",
+        "Orange shading indicates vaccine stockout"
+      ),
+      x = "Year"
+    )
   
   return(numerator_plot)
 }
@@ -2013,7 +1682,6 @@ plt_numerator_list <- purrr::imap(coadmin_pairs, function(vaccines, cluster_name
   # Generate the plot dynamically passing the cluster's name as the time_point
   make_numerator_plot(plot_data_cluster, cluster_name)
 })
-
 
 # Clean up list by removing any clusters that didn't have data matches
 plt_numerator_list <- Filter(Negate(is.null), plt_numerator_list)
@@ -2111,6 +1779,7 @@ vaccine_order <- c("BCG", "HepBB", "DTP1", "DTP3", "Hib3", "HepB3", "PCVC", "Rot
 
 heatmap_data_wuenic$Vaccine <- factor(
   heatmap_data_wuenic$Vaccine,
+  levels = intersect(vaccine_order, wuenic_vaccines)  # only levels that exist
 )
 
 # plot
@@ -2119,7 +1788,7 @@ plt_missing_heatmap <- ggplot(heatmap_data_wuenic, aes(x = factor(Year), y = fct
   scale_fill_manual(values   = c("Missing" = "#E2231A", "Present" = "#00833D"), na.value = "white") +
   theme_minimal() +
   labs(title = paste0("Admin Data Availability Heatmap, ", .current_country, ", ", min_yr_plots, "–", rev_yr),
-       x = t_lookup("axis_year", language), y = t_lookup("tbl_schedule_vaccine", language), fill = "Data Status") +
+       x = "Year", y = "Vaccine", fill = "Data Status") +
   theme(
     axis.text.x    = element_text(angle = 45, vjust = 0.5, size = 8),
     panel.grid     = element_blank(),
@@ -2128,289 +1797,3 @@ plt_missing_heatmap <- ggplot(heatmap_data_wuenic, aes(x = factor(Year), y = fct
   )
 plt_missing_heatmap
 
-## ---------------------------------------------------------------------------------------------------------------------
-### Comparison Heatmap: Coverage by Vaccine and Source
-## ---------------------------------------------------------------------------------------------------------------------
-
-# translate the facet labels (source) for use in the next two plots
-facet_source_labels <- c(
-  "WHO/UNICEF" = t_lookup("source_who_unicef", language),
-  "Admin" = t_lookup("source_admin", language),
-  "Official (Government Estimate)" = t_lookup("source_official", language),
-  "Survey" = t_lookup("source_survey", language)
-)
-
-recent_years <- sort(unique(wuenic_master_current$Year), decreasing = TRUE)[1:n_years_comparison_plot]
-min_yr <- min(recent_years)
-max_yr <- max(recent_years)
-
-introduction_data <- heatmap_data_wuenic %>% 
-  filter(status == "Not Introduced") %>%
-  select(Year, Vaccine, status) %>% 
-  arrange(Vaccine, Year)
-
-summary_long <- wuenic_master_current %>%
-  filter(Year %in% recent_years) %>%
-  select(Vaccine, Year, WUENIC, Admin, Official) %>%
-  pivot_longer(cols = c(WUENIC, Admin, Official), names_to = "Source", values_to = "Coverage") %>%
-  # complete the table for all recent years (have coverage NA)
-  complete(Year = recent_years, Vaccine = wuenic_vaccines, Source = c("WUENIC", "Admin", "Official")) %>%
-  mutate(
-    Source  = factor(Source, levels = c("WUENIC", "Admin", "Official")),
-    Year    = as.integer(as.character(Year)),
-    Vaccine = factor(Vaccine, levels = rev(c("BCG", "HepBB", "DTP1", "DTP3", "Hib3", "HepB3",
-                                             "PCVC", "RotaC", "POL3", "IPV1", "IPVC",
-                                             "MCV1", "RCV1", "MCV2", "YFV", "MengA", "HPVc")))
-  ) %>%
-  mutate(Source = recode(Source, "WUENIC" = "WHO/UNICEF", "Official" = "Official (Government Estimate)")) %>% 
-  arrange(Vaccine, Year)
-
-# join vaccine introduction status so we can correctly color in the heatmap
-summary_long <- summary_long %>% 
-  left_join(introduction_data, by = c("Year", "Vaccine")) %>%
-  mutate(
-    status = case_when(
-      is.na(Coverage) & is.na(status) ~ "Missing",
-      !is.na(Coverage) ~ "Present",
-      TRUE ~ status
-    )
-  )
-
-# prep survey data, filter to only years that have survey data
-survey_years_with_data <- wuenic_master_current %>%
-  filter(Year %in% recent_years, !is.na(Survey)) %>%
-  pull(Year) %>%
-  unique()
-
-survey_long <- wuenic_master_current %>%
-  filter(Year %in% survey_years_with_data) %>%
-  select(Vaccine, Year, Survey) %>%
-  pivot_longer(cols = Survey, names_to = "Source", values_to = "Coverage") %>%
-  mutate(
-    Source  = "Survey",
-    Year    = as.integer(as.character(Year)),
-    Vaccine = factor(Vaccine, levels = rev(c("BCG", "HepBB", "DTP1", "DTP3", "Hib3", "HepB3",
-                                             "PCVC", "RotaC", "POL3", "IPV1", "IPVC",
-                                             "MCV1", "RCV1", "MCV2", "YFV", "MengA", "HPVc")))
-  ) 
-
-survey_long <- survey_long %>% 
-  left_join(introduction_data, by = c("Year", "Vaccine")) %>%
-  mutate(
-    status = case_when(
-      is.na(Coverage) & is.na(status) ~ "Missing",
-      !is.na(Coverage) ~ "Present",
-      TRUE ~ status
-    )
-  )
-
-# combine with summary_long for plotting
-survey_years_label <- paste(sort(survey_years_with_data), collapse = ", ")
-combined_long <- bind_rows(summary_long, survey_long) %>% 
-  mutate(
-    Source = factor(Source, levels = c("WHO/UNICEF", "Admin", "Official (Government Estimate)", "Survey")),
-    Year_discrete = factor(Year) # <-- Create a factor version of Year for the x-axis
-  )
-
-# set missing values separately for the fill (white for not introduced, grey for missing) and the label (blank for not introduced, "—" for missing)
-combined_long <- combined_long %>%
-  mutate(
-    fill_val = case_when(
-      status == "Not Introduced" ~ NA_real_,  # white via na.value
-      status == "Missing"        ~ NA_real_,         # grey via sentinel
-      TRUE                       ~ Coverage
-    ),
-    label = case_when(
-      status == "Not Introduced" ~ "",
-      status == "Missing"        ~ "—",
-      TRUE                       ~ sprintf("%.0f", Coverage)
-    )
-  ) 
-
-plt_summary_table <- ggplot(combined_long, aes(x = Year_discrete, y = Vaccine)) +
-  geom_tile(aes(fill = fill_val), color = "white", linewidth = 0.4) +
-  geom_tile(data = combined_long %>% filter(status == "Missing"),
-            aes(color = t_lookup("legend_missing_data", language)), fill = "#d3d3d3", linewidth = 0.4) +
-  geom_text(aes(label = label), color = "white", size = 4) +
-  scale_fill_gradientn(
-    colours  = c("#B50800", "#E2231A", "#F26A21", "#FFC20E", "#80BD41", "#00833D"),
-    values   = scales::rescale(c(0, 57, 67, 77, 87, 94, 100)), 
-    limits   = c(0, 100), 
-    oob      = scales::squish,
-    breaks   = c(0, 59, 69, 79, 89, 100),
-    labels   = c("0", "60", "70", "80", "90", "100"),
-    na.value = "white",
-    guide    = guide_colorbar(
-      order     = 1,
-      barheight = unit(0.4, "cm")
-    ) 
-  ) +
-  scale_color_manual(
-    name   = NULL, 
-    values = setNames("#d3d3d3", t_lookup("legend_missing_data", language)),
-    guide  = guide_legend(
-      order        = 2, 
-      label.position = "bottom", 
-      label.vjust  = 1.5,      
-      keywidth     = unit(0.2, "cm"), 
-      keyheight    = unit(0.5, "cm"),
-      override.aes = list(fill = "#d3d3d3", color = "#d3d3d3")
-    )
-  ) + 
-  facet_grid(. ~ Source, scales = "free_x", space = "free_x", labeller = as_labeller(facet_source_labels)) +
-  theme_minimal() +
-  labs(
-    title = paste0(t_lookup("plt_coverage_trends_title", language), ", ", .current_country, ", ", min_yr_plots, "–", rev_yr),
-    x = t_lookup("axis_year", language), 
-    y = NULL, 
-    fill = t_lookup("coverage", language),
-    caption = paste0(
-      t_lookup("caption_summary_hpv", language), " ",
-      t_lookup("caption_summary_colors", language), "\n",
-      if (survey_years_label != "") {
-        paste0(t_lookup("caption_summary_survey_prefix", language), survey_years_label, ").")
-      } else {
-        # Wrap the lookup in gsub to swap the placeholder with the country name
-        gsub("{ctryn}", ctryn, t_lookup("caption_summary_no_survey", language), fixed = TRUE)
-      }
-    )
-  ) +
-  theme(
-    plot.title         = element_text(hjust = 0.5, size = 14),
-    plot.subtitle      = element_text(hjust = 0.5, size = 11),
-    strip.background   = element_rect(fill = "#0083CF", color = NA),
-    strip.text         = element_text(color = "white", face = "bold", size = 11),
-    panel.grid         = element_blank(),
-    axis.text.x        = element_text(size = 9),
-    axis.text.y        = element_text(size = 9),
-    panel.border       = element_rect(color = "grey80", fill = NA),
-    panel.spacing      = unit(0.5, "lines"),
-    legend.position    = "bottom",
-    legend.box         = "horizontal",       
-    legend.box.just    = "bottom",
-    legend.box.spacing = unit(1, "cm"),    
-    legend.key.width   = unit(2, "cm"),
-    legend.text        = element_text(size = 11, vjust = 0.5)
-  )
-
-plt_summary_table
-
-## ---------------------------------------------------------------------------------------------------------------------
-### Percent Comparison Heatmap - each type compared to WHO/UNICEF
-## ---------------------------------------------------------------------------------------------------------------------
-
-# ── BUILD DIFF DATA ───────────────────────────────────────────────────────────
-wuenic_ref <- summary_long %>%
-  filter(Source == "WHO/UNICEF") %>%
-  select(Vaccine, Year, wuenic_coverage = Coverage)
-
-diff_long <- combined_long %>%
-  filter(Source != "WHO/UNICEF") %>%
-  left_join(wuenic_ref, by = c("Vaccine", "Year")) %>%
-  mutate(
-    diff_val = case_when(
-      status == "Not Introduced" ~ NA_real_,
-      status == "Missing"        ~ NA_real_,
-      is.na(wuenic_coverage)     ~ NA_real_,
-      TRUE                       ~ Coverage - wuenic_coverage
-    ),
-    diff_label = case_when(
-      status == "Not Introduced" ~ "",
-      status == "Missing"        ~ "—",
-      is.na(wuenic_coverage)     ~ "—",
-      TRUE                       ~ sprintf("%+.0f", diff_val)
-    )
-  )
-
-wuenic_long <- combined_long %>% 
-  filter(Source == "WHO/UNICEF")
-
-# ── PLOT ──────────────────────────────────────────────────────────────────────
-plt_diff_table <- ggplot() +
-  
-  # ── wuenic facet ──
-  geom_tile(data = wuenic_long %>% filter(!status %in% c("Not Introduced", "Missing")),
-            aes(x = Year_discrete, y = Vaccine, fill = fill_val),
-            color = "white", linewidth = 0.4) +
-  geom_tile(data = wuenic_long %>% filter(status == "Missing"),
-            aes(x = Year_discrete, y = Vaccine, color = t_lookup("legend_missing_data", language)),
-            fill = "#d3d3d3", linewidth = 0.4) +
-  geom_text(data = wuenic_long, aes(x = Year_discrete, y = Vaccine, label = label),
-            color = "white", size = 3.5) +
-  # blue gradient for wuenic
-  scale_fill_gradient(
-    name = t_lookup("source_who_unicef_coverage", language),
-    low = "#A5CDE3", high = "#0083CF",
-    guide = guide_colorbar(order = 1, barheight = unit(0.4, "cm"), barwidth = unit(6, "cm"))
-  ) +
-  
-  # ── diff facets: colored by pp difference ──
-  ggnewscale::new_scale_fill() +
-  geom_tile(data = diff_long, aes(x = Year_discrete, y = Vaccine, fill = diff_val),
-            color = "white", linewidth = 0.4) +
-  geom_tile(data = diff_long %>% filter(status == "Missing" | (is.na(diff_val) & status != "Not Introduced")),
-            aes(x = Year_discrete, y = Vaccine, color = t_lookup("legend_missing_data", language)),
-            fill = "#d3d3d3", linewidth = 0.4) +
-  geom_text(data = diff_long, aes(x = Year_discrete, y = Vaccine, label = diff_label),
-            color = "white", size = 3.5) +
-  
-  scale_fill_gradientn(
-    name     = t_lookup("legend_pp_difference", language),
-    colours  = c("#B50800", "#E2231A", "#F26A21", "#FFC20E", "#80BD41", "#00833D", "#80BD41", "#FFC20E", "#F26A21", "#E2231A", "#B50800"),
-    values   = scales::rescale(c(-50, -30, -20, -10, -3, 0, 3, 10, 20, 30, 50)),
-    limits   = c(-50, 50),
-    oob      = scales::squish,
-    breaks   = c(-40, -20, 0, 20, 40),
-    labels   = c(paste0("−40", t_lookup("unit_pp", language)), 
-                 paste0("−20", t_lookup("unit_pp", language)), 
-                 "0", 
-                 paste0("+20", t_lookup("unit_pp", language)), 
-                 paste0("+40", t_lookup("unit_pp", language))),
-    na.value = "white",
-    guide    = guide_colorbar(order = 2, barheight = unit(0.4, "cm"), barwidth = unit(6, "cm"))
-  ) +
-  scale_color_manual(
-    name = NULL, 
-    values = setNames("#d3d3d3", t_lookup("legend_missing_data", language)),
-    guide = guide_legend(
-      order = 3, label.position = "bottom", label.vjust = 1.5,
-      keywidth = unit(0.2, "cm"), keyheight = unit(0.5, "cm"),
-      override.aes = list(fill = "#d3d3d3", color = "#d3d3d3")
-    )
-  ) +
-  facet_grid(. ~ Source, scales = "free_x", space = "free_x", labeller = as_labeller(facet_source_labels)) +
-  theme_minimal() +
-  labs(
-    title = paste0(t_lookup("plt_coverage_compare_title", language), ", ", .current_country, ", ", min_yr, "–", max_yr),
-    x = t_lookup("axis_year", language), 
-    y = NULL,
-    caption = paste0(
-      get_text2("txt_caption_comparison_explanation", text_vars), "\n\n ",
-      t_lookup("caption_summary_colors", language), "\n",
-      if (survey_years_label != "") {
-        paste0(t_lookup("caption_summary_survey_prefix", language), survey_years_label, ").")
-      } else {
-        # Wrap the lookup in gsub to swap the placeholder with the country name
-        gsub("{ctryn}", ctryn, t_lookup("caption_summary_no_survey", language), fixed = TRUE)
-      }
-    )
-  ) +
-  theme(
-    plot.title         = element_text(hjust = 0.5, size = 14),
-    plot.subtitle      = element_text(hjust = 0.5, size = 11),
-    strip.background   = element_rect(fill = "#0083CF", color = NA),
-    strip.text         = element_text(color = "white", face = "bold", size = 11),
-    panel.grid         = element_blank(),
-    axis.text.x        = element_text(size = 9),
-    axis.text.y        = element_text(size = 9),
-    panel.border       = element_rect(color = "grey80", fill = NA),
-    panel.spacing      = unit(0.5, "lines"),
-    legend.position    = "bottom",
-    legend.box         = "horizontal",
-    legend.box.just    = "bottom",
-    legend.box.spacing = unit(1, "cm"),
-    legend.key.width   = unit(2, "cm"),
-    legend.text        = element_text(size = 11, vjust = 0.5)
-  )
-
-plt_diff_table
