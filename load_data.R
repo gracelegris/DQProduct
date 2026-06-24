@@ -21,6 +21,9 @@ wiise_schedule <- read_excel(str_glue("{wiisefolder}/output/wiise-schedule-dta_m
 wiise_intro <- read_excel(str_glue("{wiisefolder}/output/wiise-intro-dta_{rev_yr}rev.xlsx"))
 wiise_stockouts <- read_excel(str_glue("{wiisefolder}/output/wiise-stock-dta_{rev_yr}rev.xlsx"))
 
+# vaccine levels
+vaccine_levels <- c("BCG","HepBB","DTP1","DTP3","Hib3","HepB3","PCVC","RotaC","IPV1","IPVC","MCV1","RCV1","MCV2","YFV","MengA","HPVc")
+
 # clean vaccine names
 wiise_intro <- wiise_intro %>%
   mutate(vaccine = case_when(

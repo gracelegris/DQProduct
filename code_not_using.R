@@ -1541,3 +1541,283 @@ if(denom_data_available) {
       theme(plot.title = element_text(hjust = 0.5, size = 14), plot.subtitle = element_text(hjust = 0.5, size = 11))
   })
 }
+
+
+## ---------------------------------------------------------------------------------------------------------------------
+### Plot: Numerators for all vaccines
+## ---------------------------------------------------------------------------------------------------------------------
+
+all_numerators <- wuenic_master_current %>%
+  select(Vaccine, Year, ChildrenVaccinated, any_stockout) %>%
+  filter(!is.na(ChildrenVaccinated))
+
+min_numerator <- min(all_numerators$ChildrenVaccinated, na.rm = TRUE)
+max_numerator <- max(all_numerators$ChildrenVaccinated, na.rm = TRUE)
+y_breaks_num  <- pretty(c(min_numerator, max_numerator), n = 5)
+
+# color palette - one color per vaccine
+vaccine_colors <- c(
+  "BCG"    = "#1CABE2", "HepBB"  = "#0058AB", "DTP1"   = "#00833D",
+  "DTP3"   = "#80BD41", "Hib3"   = "#6A1E74", "HepB3"  = "#590016",
+  "PCVC"   = "#E2231A", "RotaC"  = "#e86100", "IPV1"   = "#B50800", 
+  "IPVC"   = "#FFa500", "MCV1"   = "#2E7EBB", "RCV1"   = "#9E9E9E", 
+  "MCV2"   = "#FFB6C1", "YFV"    = "#5B4A9C", "MengA"  = "#ffdb58", 
+  "HPVc"   = "#D45F9E"
+)
+
+# first data point per vaccine for labels
+first_points <- all_numerators %>%
+  group_by(Vaccine) %>%
+  filter(Year == min(Year)) %>%
+  ungroup()
+
+plt_all_numerators <- ggplot(all_numerators, aes(x = Year, y = ChildrenVaccinated, color = Vaccine)) +
+  geom_line(size = 0.8) +
+  scale_color_manual(values = vaccine_colors) +
+  ggrepel::geom_text_repel(
+    data = first_points, aes(label = Vaccine, color = Vaccine), fontface = "bold",
+    size = 2.5, show.legend = FALSE, direction = "y",
+    hjust = 1.2, nudge_x = -0.2, segment.color = NA
+  ) +
+  scale_x_continuous(breaks = seq(min(all_numerators$Year), max(all_numerators$Year))) +
+  scale_y_continuous(limits = c(min(y_breaks_num), max(y_breaks_num)), breaks = y_breaks_num,
+                     labels = scales::label_number(scale_cut = scales::cut_short_scale())) +
+  theme_minimal() +
+  labs(
+    title = paste0(get_text2("txt_label_num_vax2", text_vars), ", ", .current_country, ", ", min_yr_plots, "–", rev_yr),
+    x = t_lookup("axis_year", language), y = get_text2("txt_label_num_vax", text_vars), color = t_lookup("tbl_schedule_vaccine", language)
+  ) +
+  theme(
+    axis.text.x      = element_text(angle = 45, hjust = 1, size = 8),
+    axis.title.x = element_blank(),
+    axis.ticks.x     = element_line(color = "black"),
+    axis.ticks.y     = element_line(color = "black"),
+    panel.border     = element_rect(color = "black", fill = NA, size = 0.6),
+    strip.background = element_rect(fill = "#0083CF"),
+    strip.text       = element_text(color = "white", face = "bold"),
+    plot.title       = element_text(hjust = 0.5, size = 14),
+    panel.grid.minor   = element_blank()
+  )
+plt_all_numerators
+
+
+
+## ---------------------------------------------------------------------------------------------------------------------
+### Denom Plot 1: Year-to-year admin denominator change flagged if direction switches
+## ---------------------------------------------------------------------------------------------------------------------
+
+denom_change_data <- wuenic_master_current %>%
+  group_by(Vaccine) %>%
+  mutate(
+    prev_target       = lag(ChildrenInTarget),
+    pct_change_denom = ((ChildrenInTarget - prev_target) / prev_target) * 100,
+    flag_denom_change = abs(pct_change_denom) > pct_threshold
+  ) %>%
+  ungroup()
+
+# ── OUTLIER HANDLING ──────────────────────────────────────────────────────────
+outlier_threshold <- 500
+
+# ── 1. FLAG EXTREME ChildrenInTarget VALUES ───────────────────────────────────
+denom_change_data <- denom_change_data %>%
+  group_by(Vaccine) %>%
+  mutate(
+    median_target     = median(ChildrenInTarget, na.rm = TRUE),
+    target_ratio      = ChildrenInTarget / median_target,
+    target_is_extreme = !is.na(target_ratio) & target_ratio > 10
+  ) %>%
+  ungroup()
+
+target_outliers_removed <- denom_change_data %>%
+  filter(target_is_extreme) %>%
+  select(Vaccine, Year, ChildrenInTarget, median_target, target_ratio) %>%
+  mutate(
+    ratio_rounded  = round(target_ratio, 1),
+    target_rounded = scales::label_number(scale_cut = scales::cut_short_scale())(ChildrenInTarget)
+  )
+
+denom_change_data <- denom_change_data %>%
+  mutate(
+    ChildrenInTarget  = if_else(target_is_extreme, NA_real_, ChildrenInTarget),
+    pct_change_denom  = if_else(target_is_extreme, NA_real_, pct_change_denom),
+    flag_denom_change = if_else(target_is_extreme, NA,       flag_denom_change)
+  )
+
+# ── 2. FLAG EXTREME pct_change_denom VALUES ───────────────────────────────────
+pct_outliers_removed <- denom_change_data %>%
+  filter(!is.na(pct_change_denom), abs(pct_change_denom) > outlier_threshold) %>%
+  select(Vaccine, Year, pct_change_denom, ChildrenInTarget) %>%
+  mutate(pct_change_rounded = round(pct_change_denom, 1))
+
+denom_change_data <- denom_change_data %>%
+  mutate(
+    pct_change_denom  = if_else(!is.na(pct_change_denom) & abs(pct_change_denom) > outlier_threshold, NA_real_, pct_change_denom),
+    flag_denom_change = if_else(is.na(pct_change_denom), NA, flag_denom_change)
+  )
+
+# ── 3. DETECT DIRECTIONAL SWITCHES ────────────────────────────────────────────
+# identify points where the direction of growth changes from positive to negative or vice versa
+# identify points where the direction of growth changes, skipping "no change" years
+# identify points where the direction of growth changes, ignoring the recovery phase
+denom_change_data <- denom_change_data %>%
+  group_by(Vaccine) %>%
+  arrange(Year) %>%
+  mutate(
+    # calculate current sign (-1, 0, or 1)
+    current_sign = sign(pct_change_denom),
+    
+    # look back to see what the steady trend was *before* this point
+    # we use a lag of 2 to check the historical vector direction
+    prev_sign_1 = lag(current_sign, 1),
+    prev_sign_2 = lag(current_sign, 2),
+    
+    # flag a switch ONLY if it breaks a multi-year established direction, 
+    # or if it's the first departure from a stable growth line.
+    direction_switch = case_when(
+      # 2013 scenario: previous was positive (1), current drops (-1). Clear switch.
+      current_sign == -1 & prev_sign_1 == 1 ~ "switch",
+      
+      # 2013 inverse scenario: previous was negative (-1), current spikes (1). Clear switch.
+      current_sign == 1 & prev_sign_1 == -1 & (is.na(prev_sign_2) | prev_sign_2 == -1) ~ "switch",
+      
+      # default everything else (including recovery bounces like 2014) to normal
+      TRUE ~ "normal"
+    )
+  ) %>%
+  # clean up the temporary tracking columns
+  select(-prev_sign_1, -prev_sign_2) %>%
+  ungroup()
+
+# denom_change_data <- denom_change_data %>%
+#   group_by(Vaccine) %>%
+#   arrange(Year) %>%
+#   mutate(
+#     # calculate the sign of the current change (-1 for decrease, 1 for increase)
+#     current_sign = sign(pct_change_denom),
+#     # fetch the previous valid change direction sign
+#     prev_sign = lag(current_sign),
+#     # flag if both current and previous have valid signs and they do not match
+#     direction_switch = if_else(!is.na(current_sign) & !is.na(prev_sign) & current_sign != prev_sign, "switch", "normal")
+#     # if current is 0 (no change in denominator) and previous is non-zero, consider it normal
+#     direction_switch = if_else(current_sign == 0 & !is.na(prev_sign) & prev_sign != 0, "normal", direction_switch)
+#   ) %>%
+#   ungroup()
+
+# ── 4. BUILD CAPTION NOTES ────────────────────────────────────────────────────
+if (nrow(pct_outliers_removed) > 0) {
+  pct_outlier_note <- pct_outliers_removed %>%
+    mutate(note = paste0(Vaccine, " (", Year, ": ", pct_change_rounded, "%)")) %>%
+    pull(note) %>%
+    paste(collapse = "; ")
+  pct_outlier_subtitle <- paste0("Pct-change outliers removed (|change| > ", outlier_threshold, "%): ", pct_outlier_note)
+} else {
+  pct_outlier_subtitle <- ""
+}
+
+if (nrow(target_outliers_removed) > 0) {
+  target_outlier_note <- target_outliers_removed %>%
+    mutate(note = paste0(Vaccine, " (", Year, ": ", target_rounded, ", ", ratio_rounded, "× median)")) %>%
+    pull(note) %>%
+    paste(collapse = "; ")
+  target_outlier_subtitle <- paste0("Extreme target population values removed (>10× vaccine median): ", target_outlier_note)
+} else {
+  target_outlier_subtitle <- ""
+}
+
+outlier_caption <- paste(
+  c(pct_outlier_subtitle, target_outlier_subtitle)[nchar(c(pct_outlier_subtitle, target_outlier_subtitle)) > 0],
+  collapse = "\n"
+)
+
+# ── DATA AVAILABILITY CHECK (per vaccine) ────────────────────────────────────
+vaccines_with_denominator_data <- denom_change_data %>%
+  group_by(Vaccine) %>%
+  summarise(n_valid = sum(!is.na(ChildrenInTarget)), .groups = "drop") %>%
+  filter(n_valid > 1) %>%
+  pull(Vaccine)
+
+vaccines_no_denominator_data <- denom_change_data %>%
+  distinct(Vaccine) %>%
+  filter(!Vaccine %in% vaccines_with_denominator_data) %>%
+  pull(Vaccine)
+
+# ── SCALING (only on vaccines with data) ──────────────────────────────────────
+plot_data_for_scaling <- denom_change_data %>% filter(Vaccine %in% vaccines_with_denominator_data)
+
+target_min <- min(plot_data_for_scaling$ChildrenInTarget, na.rm = TRUE)
+target_max <- max(plot_data_for_scaling$ChildrenInTarget, na.rm = TRUE)
+if (is.na(target_max) || target_max == 0) target_max <- 1
+if (is.na(target_min)) target_min <- 0
+
+# ── PLOT: vaccines WITH sufficient data ───────────────────────────────────────
+if (length(vaccines_with_denominator_data) > 0) {
+  
+  plot_data_sufficient <- denom_change_data %>% filter(Vaccine %in% vaccines_with_denominator_data)
+  
+  plt_denom_change <- local({
+    frozen_plot_data <- plot_data_sufficient
+    frozen_target_min <- target_min
+    frozen_target_max <- target_max
+    frozen_outlier_caption <- outlier_caption
+    frozen_year_min <- min(plot_data_sufficient$Year)
+    frozen_year_max <- max(plot_data_sufficient$Year)
+    frozen_title <- paste0(t_lookup("title_denominator", language), ", ", .current_country, ", ", min_yr_plots, "–", rev_yr)
+    
+    target_pop_label <- get_text2("txt_target_pop", text_vars)
+    
+    ggplot(frozen_plot_data, aes(x = Year)) +
+      geom_line(aes(y = ChildrenInTarget, group = Vaccine, linetype = target_pop_label), color = "#0058AB", linewidth = 0.8, alpha = 0.6, na.rm = TRUE) +
+      geom_point(aes(y = ChildrenInTarget, color = direction_switch), size = 2.5, na.rm = TRUE) +
+      facet_wrap(~Vaccine, scales = "fixed") +
+      scale_y_continuous(
+        name = target_pop_label, 
+        limits = c(frozen_target_min * 0.9, frozen_target_max * 1.1),
+        labels = scales::label_number(scale_cut = scales::cut_short_scale())
+      ) +
+      scale_x_continuous(breaks = seq(frozen_year_min, frozen_year_max, by = 1), labels = function(x) ifelse(x %% 2 == 0, as.character(x), "")) +
+      scale_color_manual(
+        name = NULL, 
+        values = c("switch" = "#E2231A", "normal" = "#0058AB"), 
+        labels = c("switch" = "Direction Switch", "normal" = "Normal Trend"),
+        breaks = c("switch", "normal")
+      ) +
+      scale_linetype_manual(name = NULL, values = setNames("solid", target_pop_label), guide = guide_legend(order = 2, override.aes = list(color = "#0058AB", linewidth = 1))) +
+      guides(color = guide_legend(title = NULL, order = 1), linetype = guide_legend(title = NULL, order = 2)) +
+      theme_minimal() +
+      theme(
+        axis.line.y.left = element_line(color = "black"), 
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 9), 
+        axis.title.x = element_blank(),
+        axis.text.y.left = element_text(color = "black", size = 9), 
+        axis.ticks.x = element_line(color = "black"), 
+        axis.ticks.y = element_line(color = "black"), 
+        panel.grid.minor = element_blank(), 
+        panel.border = element_rect(color = "black", fill = NA, linewidth = 0.6), 
+        legend.position = "bottom", legend.box = "horizontal", strip.background = element_rect(fill = "#0083CF"), strip.text = element_text(color = "white", face = "bold"), plot.title = element_text(hjust = 0.5, size = 14), plot.caption = element_text(size = 9)
+      ) +
+      labs(title = frozen_title, 
+           caption = paste0(frozen_outlier_caption, "\n\n", get_text2("txt_caption_missing_admin", text_vars)), 
+           x = t_lookup("axis_year", language))
+  })
+} else {
+  plt_denom_change <- ggplot() +
+    annotate("text",
+             x = 0.5, y = 0.5,
+             label = paste0(get_text2("txt_no_denom_avail_msg", text_vars), " ", .current_country),
+             color = "red", size = 6, hjust = 0.5, vjust = 0.5) +
+    theme_void()
+}
+
+# ── APPEND NO-DATA NOTE TO CAPTION IF NEEDED ─────────────────────────────────
+if (length(vaccines_no_denominator_data) > 0) {
+  no_data_note <- paste0(
+    get_text2("txt_note_no_denom_avail", text_vars), " ",
+    paste(vaccines_no_denominator_data, collapse = ", ")
+  )
+  plt_denom_change <- plt_denom_change +
+    labs(caption = paste(c(outlier_caption, no_data_note)[nchar(c(outlier_caption, no_data_note)) > 0],
+                         collapse = "\n")) +
+    theme(plot.caption = element_text(color = "red", size = 12, hjust = 1))
+}
+
+plt_denom_change

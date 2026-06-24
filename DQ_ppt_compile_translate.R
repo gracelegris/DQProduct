@@ -8,6 +8,9 @@ options(scipen = 999)
 # ── TRANSLATION TABLE ────────────────────────────────────────────────────────
 translation_table <- read.csv(file.path(RevDir, "unicef-products/dummy/country-specific-charts/translation-table_charts_ctry.csv"))
 
+# comment table formatting
+source(file.path(dqfolder, "comments_slides.R"), local = FALSE)
+
 # ── DATA LOADING ─────────────────────────────────────────────────────────────
 wuenic_master <- read.csv(file.path(DummyDataDir, "wuenic-master_2025rev.csv")) %>%  
   mutate(Vaccine = case_when(
@@ -101,6 +104,15 @@ for (language in languages) {
     func_slide_v_txt(str_glue(sched_foot_tpl))
   }
   
+  if (nrow(tbl_stock_r) > 0 && ncol(tbl_stock_r) > 0) {
+    doc <- add_slide(doc, layout = "data_no_logos", master = "Office Theme")
+    stock_title <- get_text2("txt_stockout_title", text_vars)
+    doc <- ph_with(doc, value = fpar(ftext(stock_title, prop = fp_text(font.size = 28, color = "black", font.family = "Calibri"))), location = ph_location(left = 0.6, top = 0.6, width = 8, height = 1))
+    doc <- ph_with(x = doc, value = tbl_stock, location = ph_location(left = 0.6, top = 1.5, width = 10, height = 5))
+    stock_foot <- get_text2("txt_stockout_table", text_vars)
+    func_slide_v_txt(stock_foot)
+  }
+  
   if (!no_data(tbl_intro_r) && nrow(tbl_intro_r) > 0 && ncol(tbl_intro_r) > 0) {
     doc <- add_slide(doc, layout = "data_1", master = "Office Theme")
     intro_title <- get_text2("txt_intro_table_title", text_vars)
@@ -127,23 +139,27 @@ for (language in languages) {
   # section: numerator validation analysis
   func_slide_bb(get_text2("txt_sec_numerator_checks", text_vars))
   
-  if (nrow(tbl_stock_r) > 0 && ncol(tbl_stock_r) > 0) {
-    doc <- add_slide(doc, layout = "data_no_logos", master = "Office Theme")
-    stock_title <- get_text2("txt_stockout_title", text_vars)
-    doc <- ph_with(doc, value = fpar(ftext(stock_title, prop = fp_text(font.size = 28, color = "black", font.family = "Calibri"))), location = ph_location(left = 0.6, top = 0.6, width = 8, height = 1))
-    doc <- ph_with(x = doc, value = tbl_stock, location = ph_location(left = 0.6, top = 1.5, width = 10, height = 5))
-    stock_foot <- get_text2("txt_stockout_table", text_vars)
-    func_slide_v_txt(stock_foot)
-  }
+  # numerator comments table
+  doc <- render_comment_slides("Numerator Accuracy", doc, comments_country, text_vars, last_5_yrs, rev_yr, most_recent_yr)
+  func_slide_v_txt(get_text2("txt_comments_note_num", text_vars))
   
   # func_slide_v(dml_plt_all_numerators)
   # func_slide_v_txt(get_text2("txt_all_numerators", text_vars))
   
-  func_slide_v(dml_plt_numerators_bar_all)
-  func_slide_v_txt(get_text2("txt_numerator_bars", text_vars))
+  func_slide_h(dml_plt_numerators_bar_all)
+  func_slide_h_txt(get_text2("txt_numerator_bars", text_vars))
   
   func_slide_v(dml_plt_numerators_bar_dtpmcv)
   func_slide_v_txt(get_text2("txt_numerator_bars_selection", text_vars))
+  
+  # numerator bars by time of administration
+  for (cluster_name in names(plt_numerators_coadmin_bars)) {
+    dml_plt <- rvg::dml(ggobj = plt_numerators_coadmin_bars[[cluster_name]], editable = TRUE)
+    func_slide_h(dml_plt)
+    coadmin_bars_txt <- get_text2("txt_coadmin_bars", text_vars)
+    slide_txt <- str_glue(coadmin_bars_txt, `coadmin_labels[cluster_name]` = coadmin_labels_all[[cluster_name]])
+    func_slide_h_txt(slide_txt)
+  }
   
   # func_slide_v(dml_plt_perc_change_line)
   # num_line_tpl <- get_text2("txt_numerator_line", text_vars)
@@ -162,6 +178,13 @@ for (language in languages) {
   # section: denominator verification analysis
   func_slide_bb(get_text2("txt_sec_denominator_checks", text_vars))
   
+  # denominator comments tables
+  doc <- render_comment_slides("Denominator Source",   doc, comments_country, text_vars, last_5_yrs, rev_yr, most_recent_yr)
+  func_slide_v_txt(get_text2("txt_comments_note_den_src", text_vars))
+  
+  doc <- render_comment_slides("Denominator Accuracy", doc, comments_country, text_vars, last_5_yrs, rev_yr, most_recent_yr)
+  func_slide_v_txt(get_text2("txt_comments_note_den_acc", text_vars))
+  
   func_slide_v(dml_plt_denom_change)
   func_slide_v_txt(get_text2("txt_denom_line", text_vars))
   
@@ -174,23 +197,25 @@ for (language in languages) {
   func_slide_v(dml_plt_denom_pct_change)
   func_slide_v_txt(get_text2("txt_denom_pct_change", text_vars))
   
-  # section: drop-out metrics & co-administration pairings
-  func_slide_bb(get_text2("txt_sec_dropout_coadmin", text_vars))
-  
-  func_slide_vnologo(dml_plt_dropout_with_rate)
-  func_slide_v_txt(get_text2("txt_dropout", text_vars))
+  # section: co-administration pairings
+  func_slide_bb(get_text2("txt_coadmin_schedule_title", text_vars))
   
   func_slide_v(dml_plt_coadmin_dtp_pcv)
   coadmin_tpl <- get_text2("txt_coadmin", text_vars)
   func_slide_v_txt(str_glue(coadmin_tpl))
   
-  func_slide_bb(get_text2("txt_sec_coadmin_schedule", text_vars))
+  #func_slide_bb(get_text2("txt_coadmin_schedule_title", text_vars))
   for (cluster_name in names(plt_coadmin_list)) {
     dml_plt <- rvg::dml(ggobj = plt_coadmin_list[[cluster_name]], editable = TRUE)
     func_slide_v(dml_plt)
     coadmin_sched_tpl <- get_text2("txt_coadmin_schedule", text_vars)
     func_slide_v_txt(str_glue(coadmin_sched_tpl))
   }
+  
+  # section: dropout
+  func_slide_bb(get_text2("txt_dropout_title", text_vars))
+  func_slide_vnologo(dml_plt_dropout_with_rate)
+  func_slide_v_txt(get_text2("txt_dropout", text_vars))
   
   # section: admin data availability heatmap
   #func_slide_bb(get_text2("txt_sec_data_availability", text_vars))
@@ -210,9 +235,9 @@ for (language in languages) {
   # vax_line_tpl <- get_text2("txt_vax_line", text_vars)
   # func_slide_v_txt(str_glue(vax_line_tpl))
   
-  func_slide_v(dml_plt_selected_vax_line)
+  func_slide_h_mini(dml_plt_selected_vax_line)
   three_line_tpl <- get_text2("txt_three_lines", text_vars)
-  func_slide_v_txt(str_glue(three_line_tpl))
+  func_slide_h_txt_mini(str_glue(three_line_tpl))
   
   # func_slide_v(dml_plt_admin_wuenic_1)
   # adm_wuenic_tpl1 <- get_text2("txt_admin_wuenic", text_vars)
@@ -227,8 +252,11 @@ for (language in languages) {
   # func_slide_v_txt(str_glue(adm_off_tpl))
   
   # section: admin comments
-  func_slide_bb(get_text2("txt_sec_admin_comments", text_vars))
-  source(file.path(dqfolder, "comments_slides.R"), local = FALSE)
+  #func_slide_bb(get_text2("txt_sec_admin_comments", text_vars))
+  
+  # summary comments table
+  doc <- render_comment_summary_slide(doc, comments_country, text_vars, most_recent_yr)
+  func_slide_v_txt(get_text2("txt_comments_note_summary", text_vars))
   
   # # appendix
   # func_slide_bb(get_text2("txt_appendix_title", text_vars))
