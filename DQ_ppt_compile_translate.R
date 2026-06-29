@@ -68,7 +68,7 @@ for (language in languages) {
   }
   
   # build presentation document layer
-  doc <- read_pptx(str_glue("{utils}/intervention_analysis_template.pptx"))
+  doc <- read_pptx(str_glue("{utils}/DQ_template.pptx"))
   
   # cover slide layout execution
   doc <- add_slide(doc, layout = "cover_country", master = "Office Theme")
@@ -78,6 +78,10 @@ for (language in languages) {
   report_title_tpl <- get_text2("txt_cover_subtitle", text_vars)
   doc <- ph_with(x = doc, block_list(fpar(ftext(str_glue(report_title_tpl), prop = fp_text(font.size = 22, color = "white")), fp_p = fp_par(text.align = "center"))), location = ph_location("body", left = 3.34, top = 3.92, width = 7, height = 1.22))
   doc <- remove_slide(doc, index = 1) # drop first default template slide
+  
+  # wuenic info slide (from translation table)
+  doc <- add_slide(doc, layout = "blank_slide_blue", master = "Office Theme")
+  func_slide_h_txt_info(t_lookup("info_wuenic_body", language))
   
   # standard static master text slide inserts
   doc <- add_slide(doc, layout = "report_introduction", master = "Office Theme")
@@ -269,7 +273,7 @@ for (language in languages) {
   # save ppt
   folder_path <- file.path(dq_folder, "DQProduct/outputs/all_countries")
   dir.create(folder_path, recursive = TRUE, showWarnings = FALSE)
-  suffix <- str_glue("_{language}")
+  suffix <- str_glue("_{language}_test")
   print(doc, target = file.path(folder_path, paste0(.current_country, "_DQ", suffix, ".pptx")))
   cat("  💾 Saved:", language, "version\n")
 }

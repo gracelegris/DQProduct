@@ -602,6 +602,52 @@ seg_data <- denom_change_data %>%
          x_end == Year + 1) %>%  # only connect consecutive years
   ungroup()
 
+# ── DATA AVAILABILITY CHECK (per vaccine) ────────────────────────────────────
+vaccines_with_denominator_data <- denom_change_data %>%
+  group_by(Vaccine) %>%
+  summarise(n_valid = sum(!is.na(ChildrenInTarget)), .groups = "drop") %>%
+  filter(n_valid > 1) %>%
+  pull(Vaccine)
+
+vaccines_no_denominator_data <- denom_change_data %>%
+  distinct(Vaccine) %>%
+  filter(!Vaccine %in% vaccines_with_denominator_data) %>%
+  pull(Vaccine)
+
+# ── SCALING (only on vaccines with data) ──────────────────────────────────────
+plot_data_for_scaling <- denom_change_data %>% filter(Vaccine %in% vaccines_with_denominator_data)
+
+max_pct <- max(abs(plot_data_for_scaling$pct_change_denom), na.rm = TRUE)
+if (is.na(max_pct) || max_pct == 0) max_pct <- 0.1
+
+if (max_pct > 250) {
+  y_max <- ceiling(max_pct / 100) * 100
+  step_size       <- 100
+  division_factor <- ((ifelse(y_max > 0, y_max / step_size, 1)) * 2) + 1
+} else if (max_pct > 150) {
+  y_max <- ceiling(max_pct / 50) * 50
+  step_size       <- 50
+  division_factor <- ((ifelse(y_max > 0, y_max / step_size, 1)) * 2) + 1
+} else {
+  y_max <- ceiling(max_pct / 25) * 25
+  step_size       <- 25
+  division_factor <- ((ifelse(y_max > 0, y_max / step_size, 1)) * 2) + 1
+}
+
+y_min <- -y_max
+
+target_min <- min(plot_data_for_scaling$ChildrenInTarget, na.rm = TRUE)
+target_max <- max(plot_data_for_scaling$ChildrenInTarget, na.rm = TRUE)
+if (is.na(target_max) || target_max == 0) target_max <- 1
+if (is.na(target_min)) target_min <- 0
+scale_factor <- (target_max - target_min) / (y_max - y_min)
+if (is.na(scale_factor) || scale_factor == 0) scale_factor <- 1
+
+denom_change_data <- denom_change_data %>%
+  mutate(
+    target_scaled = (ChildrenInTarget - target_min) / (target_max - target_min) * (y_max - y_min) + y_min
+  )
+
 # ── PLOT: vaccines WITH sufficient data ───────────────────────────────────────
 if (length(vaccines_with_denominator_data) > 0) {
   
@@ -611,7 +657,6 @@ if (length(vaccines_with_denominator_data) > 0) {
     frozen_plot_data <- plot_data_sufficient
     frozen_target_min <- target_min
     frozen_target_max <- target_max
-    frozen_outlier_caption <- outlier_caption
     frozen_year_min <- min(plot_data_sufficient$Year)
     frozen_year_max <- max(plot_data_sufficient$Year)
     frozen_title <- paste0(t_lookup("title_denominator", language), ", ", .current_country, ", ", min_yr_plots, "–", rev_yr)
@@ -672,7 +717,7 @@ if (length(vaccines_with_denominator_data) > 0) {
         plot.caption       = element_text(size = 9)
       ) +
       labs(title   = frozen_title,
-           caption = paste0(frozen_outlier_caption, "\n\n", get_text2("txt_caption_missing_admin", text_vars)),
+           caption = get_text2("txt_caption_missing_admin", text_vars),
            x       = t_lookup("axis_year", language))
   })
 } else {
@@ -1814,6 +1859,11 @@ diff_long <- combined_long %>%
 wuenic_long <- combined_long %>% 
   filter(Source == "WUENIC")
 
+# min and max differences for setting the scale
+min_diff <- min(diff_long$diff_val, na.rm = TRUE)
+max_diff <- max(diff_long$diff_val, na.rm = TRUE)
+#max_abs_diff <- ceiling(max(abs(min_diff), abs(max_diff)) / 5) * 5 # round to nearest 5
+
 # ── PLOT ──────────────────────────────────────────────────────────────────────
 plt_diff_table <- ggplot() +
   
@@ -1845,17 +1895,17 @@ plt_diff_table <- ggplot() +
   scale_color_identity() +
   scale_fill_gradientn(
     name     = t_lookup("legend_pp_difference", language),
-    colors  = c("#4b2a64", "#7f4aa6", "#b57edc", "#d6b8ee", "#e9ddf5", "#d6b8ee", "#b57edc", "#7f4aa6", "#4b2a64"),
-    #colours  = c("#4b2a64", "#7f4aa6", "#b57edc", "#d6b8ee", "white", "#d6b8ee", "#b57edc", "#7f4aa6", "#4b2a64"),
-    values   = scales::rescale(c(-50, -37.5, -25, -12.5, 0, 12.5, 25, 37.5, 50)),
-    limits   = c(-50, 50),
+    #colors  = c("#4b2a64", "#7f4aa6", "#b57edc", "#d6b8ee", "#e9ddf5", "#d6b8ee", "#b57edc", "#7f4aa6", "#4b2a64"),
+    colours  = c("#4b2a64", "#7f4aa6", "#b57edc", "#d6b8ee", "white", "#d6b8ee", "#b57edc", "#7f4aa6", "#4b2a64"),
+    values   = scales::rescale(seq(-max_diff, max_diff, length.out = 9)),
+    limits   = c(-max_diff, max_diff),
     oob      = scales::squish,
-    breaks   = c(-40, -20, 0, 20, 40),
-    labels   = c(paste0("−40", t_lookup("unit_pp", language)), 
-                 paste0("−20", t_lookup("unit_pp", language)), 
+    breaks = c(-max_diff, -max_diff / 2, 0, max_diff / 2, max_diff),
+    labels   = c(paste0("−", max_diff, t_lookup("unit_pp", language)), 
+                 paste0("−", max_diff / 2, t_lookup("unit_pp", language)), 
                  "0", 
-                 paste0("+20", t_lookup("unit_pp", language)), 
-                 paste0("+40", t_lookup("unit_pp", language))),
+                 paste0("+", max_diff / 2, t_lookup("unit_pp", language)), 
+                 paste0("+", max_diff, t_lookup("unit_pp", language))),
     na.value = "white",
     guide    = guide_colorbar(order = 2, barheight = unit(0.4, "cm"), barwidth = unit(6, "cm"))
   ) +
