@@ -1821,3 +1821,166 @@ if (length(vaccines_no_denominator_data) > 0) {
 }
 
 plt_denom_change
+
+
+## ---------------------------------------------------------------------------------------------------------------------
+### DTP3-PCVC Co-administration Plot
+## ---------------------------------------------------------------------------------------------------------------------
+
+selected_coadmin <- wuenic_master_current %>% 
+  filter(Vaccine %in% c("DTP3", "PCVC"))
+
+plt_coadmin_dtp_pcv <- ggplot(selected_coadmin, aes(x = Year, y = Admin, color = Vaccine)) +
+  geom_hline(yintercept = 100, linetype = "dashed", color = "black", alpha = 0.8) +
+  geom_line(linewidth = 1, alpha = 0.7) +
+  geom_point(size = 2.5) +
+  scale_color_manual(values = c("DTP3" = "#0058AB", "PCVC" = "#E87722")) + 
+  scale_y_continuous(limits = c(0, max(c(105, max(selected_coadmin$Admin, na.rm = TRUE)))), 
+                     breaks = seq(0, 150, by = 10), labels = scales::label_number(suffix = "%")) +
+  scale_x_continuous(breaks = seq(min(selected_coadmin$Year), max(selected_coadmin$Year))) +
+  theme_minimal() +
+  labs(
+    title = paste0(t_lookup("title_admin_coadministered", language), ", ", .current_country, ", ", min_yr_plots, "–", rev_yr),
+    x = t_lookup("axis_year", language), 
+    y = t_lookup("axis_admin_coverage_pct", language),
+    color = t_lookup("tbl_schedule_vaccine", language)
+  ) +
+  theme(
+    legend.position = "bottom",
+    axis.text.x  = element_text(angle = 45, hjust = 1, size = 9),
+    axis.text.y = element_text(size = 9),
+    axis.title.x = element_blank(),
+    axis.ticks.x = element_line(color = "black"),
+    axis.ticks.y = element_line(color = "black"),
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.6),
+    strip.background = element_rect(fill = "#0083CF"),
+    strip.text = element_text(color = "white", face = "bold"),
+    plot.title = element_text(hjust = 0.5, size = 14),
+    panel.grid.minor.x = element_blank()
+  )
+
+plt_coadmin_dtp_pcv
+
+# get which time the dtp3 and pcvc vaccines are administered
+dtp3_pcvc_time <- tbl_schedule_r %>%
+  filter(Vaccine %in% c("PCV", "DTAPHIBHEPBIPV", "DTWPHIBHEPB", "DTAPHIBIPV", "DTAPIPV", "DTWPHIBHEPBIPV",
+                        "DTAP", "DTAPHIBHEPB", "DTAPHEPBIPV", "DTAPHIB", "DTWP")) %>%
+  pivot_longer(cols = any_of(as.character(1:20)), names_to = "dose_num", values_to = "age") %>%
+  filter(dose_num == 3) %>% 
+  select(Vaccine, age) %>%
+  distinct() %>%
+  pivot_wider(names_from = Vaccine, values_from = age) %>% 
+  pull(1)
+
+
+## ---------------------------------------------------------------------------------------------------------------------
+### Denom Plot 3: Year-to-year % change for Live Births (BCG) and Surviving Infants (DTP1)
+## ---------------------------------------------------------------------------------------------------------------------
+
+denom_types_data <- wuenic_master_current %>%
+  filter(Vaccine %in% c("BCG", "DTP1")) %>%
+  mutate(DenomType = case_when(Vaccine == "BCG" ~ "Live Births", Vaccine == "DTP1" ~ "Surviving Infants")) %>%
+  select(Country, Vaccine, Year, DenomType, ChildrenInTarget) %>%
+  group_by(Vaccine) %>%
+  arrange(Vaccine, Year) %>%
+  mutate(
+    prev_denominator = lag(ChildrenInTarget),
+    # calculate current change percentage and sign (-1, 0, or 1)
+    pct_change_denom = (ChildrenInTarget - prev_denominator) / prev_denominator,
+    current_sign     = sign(pct_change_denom),
+    
+    # look back to check historical vector trend to avoid flagging the recovery phase
+    prev_sign_1 = lag(current_sign, 1),
+    prev_sign_2 = lag(current_sign, 2),
+    
+    # flag directional switches based on your custom structural rule
+    direction_switch = case_when(
+      current_sign == -1 & prev_sign_1 == 1 ~ "switch",
+      current_sign == 1 & prev_sign_1 == -1 & (is.na(prev_sign_2) | prev_sign_2 == -1) ~ "switch",
+      TRUE ~ "normal"
+    ),
+    flag_denom_change = direction_switch == "switch"
+  ) %>% 
+  mutate(DenomType = case_when(
+    Vaccine == "BCG" ~ t_lookup("caption_live_births", language),
+    Vaccine == "DTP1" ~ t_lookup("caption_si", language),
+    TRUE ~ DenomType
+  ))
+
+denom_data_available <- denom_types_data %>% filter(!is.na(ChildrenInTarget)) %>% nrow() > 1
+
+if(denom_data_available) {
+  plt_denom_pct_change <- local({
+    
+    frozen_data <- denom_types_data
+    frozen_year_min <- min(denom_types_data$Year)
+    frozen_year_max <- max(denom_types_data$Year)
+    
+    # establish healthy padding limits around the raw target numbers
+    target_min <- min(frozen_data$ChildrenInTarget, na.rm = TRUE)
+    target_max <- max(frozen_data$ChildrenInTarget, na.rm = TRUE)
+    
+    raw_denom_label <- get_text2("txt_raw_denom", text_vars)
+    
+    ggplot(frozen_data, aes(x = Year)) +
+      geom_vline(xintercept = seq(frozen_year_min, frozen_year_max, by = 1), color = "grey90", linewidth = 0.3) +
+      geom_line(aes(y = ChildrenInTarget, group = DenomType, linetype = raw_denom_label), 
+                color = "#0058AB", linewidth = 0.8, alpha = 0.6, na.rm = TRUE) +
+      geom_point(aes(y = ChildrenInTarget, color = direction_switch), size = 2.5, na.rm = TRUE) +
+      facet_wrap(~DenomType) +
+      scale_y_continuous(
+        name = raw_denom_label,
+        limits = c(target_min * 0.9, target_max * 1.1),
+        labels = scales::label_number(scale_cut = scales::cut_short_scale())
+      ) +
+      scale_x_continuous(
+        breaks = seq(frozen_year_min, frozen_year_max, by = 1),
+        #labels = function(x) ifelse(x %% 2 == 0, as.character(x), "")
+      ) +
+      scale_color_manual(
+        name = NULL,
+        values = c("normal" = "#0058AB", "switch" = "#E2231A"),
+        labels = c("normal" = "Normal Trend", "switch" = "Direction Switch"),
+        breaks = c("switch", "normal")
+      ) +
+      scale_linetype_manual(
+        name = NULL,
+        values = setNames("solid", raw_denom_label),
+        guide = guide_legend(order = 2, override.aes = list(color = "#0058AB", linewidth = 1))
+      ) +
+      guides(
+        color    = guide_legend(title = NULL, order = 1),
+        linetype = guide_legend(title = NULL, order = 2)
+      ) +
+      theme_minimal() +
+      theme(
+        legend.position    = "bottom", legend.box = "horizontal",
+        panel.border       = element_rect(color = "black", fill = NA, linewidth = 0.6),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor   = element_blank(),
+        strip.background   = element_rect(fill = "#0083CF"),
+        strip.text         = element_text(color = "white", face = "bold"),
+        axis.ticks.x       = element_line(color = "black"),
+        axis.ticks.y       = element_line(color = "black"),
+        axis.text.x        = element_text(angle = 45, hjust = 1, size = 8),
+        axis.title.x = element_blank(),
+        plot.title         = element_text(hjust = 0.5, size = 14),
+        plot.subtitle      = element_text(hjust = 0.5, size = 11)
+      ) +
+      labs(
+        title   = paste0(get_text2("txt_denom_stability", text_vars), ", ", .current_country, ", ", min_yr_plots, "–", rev_yr),
+        x       = t_lookup("axis_year", language),
+        caption = get_text2("txt_caption_missing_admin", text_vars)
+      )
+  })
+} else {
+  plt_denom_pct_change <- local({
+    ggplot() +
+      geom_text(aes(x = 1, y = 1, label = "Not enough denominator data to compute changes"), color = "red", size = 5) +
+      theme_void() +
+      labs(title = paste0("Denominator Stability Check, ", .current_country, ", ", min_yr_plots, "–", rev_yr), subtitle = "Insufficient data for calculations") +
+      theme(plot.title = element_text(hjust = 0.5, size = 14), plot.subtitle = element_text(hjust = 0.5, size = 11))
+  })
+}
+
+plt_denom_pct_change

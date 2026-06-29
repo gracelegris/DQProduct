@@ -5,55 +5,11 @@
 
 rm(list = ls())
 
-type <- "dummy"
-
-## ── PARAMETERS ───────────────────────────────────────────────────────────────
-pct_threshold <- 0.10
-second_pct_threshold <- 0.30
-rev_yr        <- 2025
-hpv_rev_yr    <- 2024
-wpp_rev_yr    <- 2024
-min_yr_plots  <- 2010
-n_years_comparison_plot <- 5 # years to display in the wuenic vs. official vs. admin coverage heatmap
-language <- "en"
-
+source("main_vars.R")
 source("user_profiles.R")
 
-## ── PATHS ───────────────────────────────────────────────────────────────────
-RevDir <- file.path("/Users/UNICEF/Library/CloudStorage/OneDrive-SharedLibraries-UNICEF/Health-HIV Data & Analytics - 2025 rev")
-directory <- file.path(RevDir, "unicef-products")
-utils      <- str_glue(RevDir, "/unicef-products/{type}/utils")
-wrkfolder  <- str_glue(RevDir, "/unicef-products/{type}/country-specific-charts")
-wiisefolder <- str_glue(RevDir, "/unicef-products/{type}/wiise-outputs")
-dqfolder   <- str_glue(RevDir, "/unicef-products/{type}/data-quality/DQProduct")
-SubnatFuncDir <- file.path("/Users/UNICEF/Library/CloudStorage/OneDrive-SharedLibraries-UNICEF/Health-HIV Data & Analytics - Subnational data analysis/utils/R")
-DummyDataDir <- str_glue(RevDir, "/wuenic_master/dummy")
-ppt_script_path <- file.path(dqfolder, "DQ_ppt_compile_translate.R")
-
-## ─────────────────────────────────────────────────────────────────────────────
-#source("01_setup.R") 
-source(file.path(PrjDir, "R/label_vals.R"))
-source(file.path(PrjDir, "R/funcs.R"))
-
-# data cleaning functions from subnational folder
-source(paste0(SubnatFuncDir, "/user_functions_outliers.R"))
-source(paste0(SubnatFuncDir, "/data_quality_funcs.R"))
-
-# source functions
-source(file.path(dqfolder, "R/label_vals.R"))
-source(file.path(dqfolder, "R/funcs.R"))
-source(str_glue("{utils}/R/slide_general_funcs.R"))    # func_slide_v, func_slide_bb, etc.
-source(str_glue("{utils}/R/slide_production_funcs.R")) # func_slide_v_txt, func_slide_v_tlm, etc.
-
-## ── COLORS ──────────────────────────────────────────────────────────────────
-unicef_colors <- c("#0058AB","#1CABE2","#00833D","#80BD41","#6A1E74",
-                   "#961A49","#E2231A","#F26A21","#FFC20E","#FFF09C","#002759")
-
-source_colors <- c("WUENIC" = "#0083CF", "Admin" = "#6A1E74", "Official Estimate" = "#80BD41", "Survey" = "#FFC20E")
-
-## ── LOAD DATA ────────────────────────────────────────────────────────────────
-source(file.path(PrjDir, "load_data.R"))
-
+## ── PARAMETERS ───────────────────────────────────────────────────────────────
+language <- "en"
 
 # get unique list of countries
 wuenic_master <- read.csv(file.path(DummyDataDir, "wuenic-master_2025rev.csv"))
@@ -73,6 +29,8 @@ list_ar <- language_list %>% filter(language == "ar") %>% filter(iso3c %in% iso_
 
 # run the loop
 cat("Starting  DQ ppt generation for", length(countries), "countries...\n")
+
+current_country = "Ethiopia"
 
 for (current_country in countries) {
   

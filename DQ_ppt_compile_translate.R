@@ -5,8 +5,9 @@
 
 options(scipen = 999)
 
-# ── TRANSLATION TABLE ────────────────────────────────────────────────────────
+# ── TRANSLATION TABLES ────────────────────────────────────────────────────────
 translation_table <- read.csv(file.path(RevDir, "unicef-products/dummy/country-specific-charts/translation-table_charts_ctry.csv"))
+translation_table_general <- read.csv(file.path(RevDir, "unicef-products/draft/utils/translation_table_general.csv"))
 
 # comment table formatting
 source(file.path(dqfolder, "comments_slides.R"), local = FALSE)
@@ -79,23 +80,18 @@ for (language in languages) {
   doc <- ph_with(x = doc, block_list(fpar(ftext(str_glue(report_title_tpl), prop = fp_text(font.size = 22, color = "white")), fp_p = fp_par(text.align = "center"))), location = ph_location("body", left = 3.34, top = 3.92, width = 7, height = 1.22))
   doc <- remove_slide(doc, index = 1) # drop first default template slide
   
-  # wuenic info slide (from translation table)
-  doc <- add_slide(doc, layout = "blank_slide_blue", master = "Office Theme")
-  func_slide_h_txt_info(t_lookup("info_wuenic_body", language))
-  
-  # standard static master text slide inserts
-  doc <- add_slide(doc, layout = "report_introduction", master = "Office Theme")
-  doc <- add_slide(doc, layout = "1_intro_slide", master = "Office Theme")
-  
-  # definitions slide by language
-  if(language == "en") {
-    doc <- add_slide(doc, layout = "definitions", master = "Office Theme")
-  } else {
-    doc <- add_slide(doc, layout = paste0("definitions_", language), master = "Office Theme")
-  }
+  # report introduction
+  doc <- add_slide(doc, layout = paste0("report_introduction_", language), master = "Office Theme")
+   
+  # eJRF slide
+  doc <- add_slide(doc, layout = paste0("eJRF_", language), master = "Office Theme")
+
+  # definitions
+  doc <- doc %>% add_slide(layout = "blank_slide_blue", master = "Office Theme")
+  doc <- func_wuenic_definition_slide(doc, language)
   
   # data source definitions
-  doc <- add_slide(doc, layout = "data_source_descriptions", master = "Office Theme")
+  doc <- add_slide(doc, layout = paste0("data_source_descriptions_", language), master = "Office Theme")
   
   # vaccine immunization schedule table generation
   schedule_year <- wiise_schedule %>% filter(iso3c == x) %>% pull(year) %>% max(na.rm = TRUE)
@@ -127,6 +123,10 @@ for (language in languages) {
   
   func_slide_v(dml_plt_missing_heatmap)
   func_slide_v_txt(get_text2("txt_missing_heatmap", text_vars))
+  
+  # summary comments table
+  doc <- render_comment_summary_slide(doc, comments_country, text_vars, most_recent_yr)
+  func_slide_v_txt(get_text2("txt_comments_note_summary", text_vars))
   
   # section: administrative data flags
   func_slide_bb(get_text2("txt_sec_admin_flags", text_vars))
@@ -198,15 +198,15 @@ for (language in languages) {
   unpd_message <- t_lookup("unpd_description", language)
   func_slide_v_txt(paste0(birth_si_tpl, "\n\n", unpd_message))
   
-  func_slide_v(dml_plt_denom_pct_change)
-  func_slide_v_txt(get_text2("txt_denom_pct_change", text_vars))
+  func_slide_v_wide(dml_plt_denom_pct_change)
+  func_slide_v_txt_wide(get_text2("txt_denom_pct_change", text_vars))
   
   # section: co-administration pairings
   func_slide_bb(get_text2("txt_coadmin_schedule_title", text_vars))
   
-  func_slide_v(dml_plt_coadmin_dtp_pcv)
-  coadmin_tpl <- get_text2("txt_coadmin", text_vars)
-  func_slide_v_txt(str_glue(coadmin_tpl))
+  # func_slide_v(dml_plt_coadmin_dtp_pcv)
+  # coadmin_tpl <- get_text2("txt_coadmin", text_vars)
+  # func_slide_v_txt(str_glue(coadmin_tpl))
   
   #func_slide_bb(get_text2("txt_coadmin_schedule_title", text_vars))
   for (cluster_name in names(plt_coadmin_list)) {
@@ -258,10 +258,6 @@ for (language in languages) {
   # section: admin comments
   #func_slide_bb(get_text2("txt_sec_admin_comments", text_vars))
   
-  # summary comments table
-  doc <- render_comment_summary_slide(doc, comments_country, text_vars, most_recent_yr)
-  func_slide_v_txt(get_text2("txt_comments_note_summary", text_vars))
-  
   # # appendix
   # func_slide_bb(get_text2("txt_appendix_title", text_vars))
   # min_yr <- min(df$year); max_yr <- max(df$year)
@@ -273,7 +269,7 @@ for (language in languages) {
   # save ppt
   folder_path <- file.path(dq_folder, "DQProduct/outputs/all_countries")
   dir.create(folder_path, recursive = TRUE, showWarnings = FALSE)
-  suffix <- str_glue("_{language}_test")
+  suffix <- str_glue("_{language}")
   print(doc, target = file.path(folder_path, paste0(.current_country, "_DQ", suffix, ".pptx")))
   cat("  💾 Saved:", language, "version\n")
 }

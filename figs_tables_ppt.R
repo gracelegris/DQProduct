@@ -281,27 +281,25 @@ make_bar_plt <- function(data, y_breaks, title_str) {
       width = bar_width * n_vax * 0.875,
       aes(
         pattern = ifelse(any_stockout == 1, "stripe", "none"),
-        colour = factor(Vaccine, levels = vaccine_levels) # <-- Keeps borders matched to the factor
+        colour = factor(Vaccine, levels = vaccine_levels)
       ),
-      linewidth = 0.5, 
-      lineend = "butt", 
-      pattern_colour = "black", 
-      pattern_angle = 45, 
-      pattern_density = 0.02,
-      pattern_spacing = 0.008, 
-      pattern_fill = "black"
+      linewidth = 0.05, pattern_colour = "black", pattern_angle = 45, pattern_density = 0.1,
+      pattern_spacing = 0.02, pattern_fill = "black", pattern_key_scale_factor = 0.6
+    ) +
+    geom_col(
+      position = position_dodge(width = dodge_width, preserve = "single"),
+      width = bar_width * n_vax * 0.875,
+      aes(colour = factor(Vaccine, levels = vaccine_levels)),
+      fill = NA,
+      linewidth = 0.5
     ) +
     scale_pattern_manual(
       values = c("stripe" = "stripe", "none" = "none"),
       labels = c("stripe" = t_lookup("vaccine_stockout", language), "none" = ""),
       guide = guide_legend(title = NULL, order = 2,
                            override.aes = list(
-                             fill = "white",
-                             colour = "transparent", 
-                             pattern_colour = "black",
-                             pattern_fill = "black",
-                             pattern_density = 0.1,
-                             pattern_spacing = 0.009))
+                             fill = "white", colour = "transparent", pattern_colour = "black",
+                             pattern_fill = "black", pattern_density = 0.1, pattern_spacing = 0.009))
     ) +
     scale_fill_manual(
       values = vaccine_colors,
@@ -875,7 +873,6 @@ plt_births_vs_si <- ggplot(denominator_data, aes(x = Year, y = Population, color
 ### Denom Plot 3: Year-to-year % change for Live Births (BCG) and Surviving Infants (DTP1)
 ## ---------------------------------------------------------------------------------------------------------------------
 
-
 denom_types_data <- wuenic_master_current %>%
   filter(Vaccine %in% c("BCG", "DTP1")) %>%
   mutate(DenomType = case_when(Vaccine == "BCG" ~ "Live Births", Vaccine == "DTP1" ~ "Surviving Infants")) %>%
@@ -884,29 +881,51 @@ denom_types_data <- wuenic_master_current %>%
   arrange(Vaccine, Year) %>%
   mutate(
     prev_denominator = lag(ChildrenInTarget),
-    # calculate current change percentage and sign (-1, 0, or 1)
     pct_change_denom = (ChildrenInTarget - prev_denominator) / prev_denominator,
     current_sign     = sign(pct_change_denom),
-    
-    # look back to check historical vector trend to avoid flagging the recovery phase
-    prev_sign_1 = lag(current_sign, 1),
-    prev_sign_2 = lag(current_sign, 2),
-    
-    # flag directional switches based on your custom structural rule
+    prev_sign_1      = lag(current_sign, 1),
+    prev_sign_2      = lag(current_sign, 2),
     direction_switch = case_when(
       current_sign == -1 & prev_sign_1 == 1 ~ "switch",
       current_sign == 1 & prev_sign_1 == -1 & (is.na(prev_sign_2) | prev_sign_2 == -1) ~ "switch",
       TRUE ~ "normal"
     ),
-    flag_denom_change = direction_switch == "switch"
-  ) %>% 
+    flag_denom_change = direction_switch == "switch",
+    pct_color = case_when(
+      is.na(pct_change_denom)        ~ "none",
+      abs(pct_change_denom) >= 0.10  ~ "high",
+      abs(pct_change_denom) >= 0.05  ~ "mid",
+      TRUE                           ~ "low"
+    )
+  ) %>%
   mutate(DenomType = case_when(
-    Vaccine == "BCG" ~ t_lookup("caption_live_births", language),
+    Vaccine == "BCG"  ~ t_lookup("caption_live_births", language),
     Vaccine == "DTP1" ~ t_lookup("caption_si", language),
     TRUE ~ DenomType
-  ))
+  )) %>%
+  ungroup()
 
 denom_data_available <- denom_types_data %>% filter(!is.na(ChildrenInTarget)) %>% nrow() > 1
+
+# segments connecting consecutive points, colored by magnitude of change
+seg_data <- denom_types_data %>%
+  group_by(Vaccine, DenomType) %>%
+  arrange(Year) %>%
+  mutate(
+    x_end  = lead(Year),
+    y_end  = lead(ChildrenInTarget),
+    seg_color = pct_color
+  ) %>%
+  filter(!is.na(x_end), !is.na(y_end)) %>%
+  ungroup()
+
+# shading bands for direction switches
+switch_bands <- denom_types_data %>%
+  filter(flag_denom_change) %>%
+  group_by(Vaccine, DenomType) %>%
+  mutate(xmin = Year - 0.5, xmax = Year + 0.5) %>%
+  select(Vaccine, DenomType, xmin, xmax) %>%
+  ungroup()
 
 if(denom_data_available) {
   plt_denom_pct_change <- local({
@@ -915,17 +934,20 @@ if(denom_data_available) {
     frozen_year_min <- min(denom_types_data$Year)
     frozen_year_max <- max(denom_types_data$Year)
     
-    # establish healthy padding limits around the raw target numbers
     target_min <- min(frozen_data$ChildrenInTarget, na.rm = TRUE)
     target_max <- max(frozen_data$ChildrenInTarget, na.rm = TRUE)
     
     raw_denom_label <- get_text2("txt_raw_denom", text_vars)
+    frozen_title <- paste0(get_text2("txt_denom_stability", text_vars), ", ", .current_country, ", ", min_yr_plots, "–", rev_yr)
     
     ggplot(frozen_data, aes(x = Year)) +
-      geom_vline(xintercept = seq(frozen_year_min, frozen_year_max, by = 1), color = "grey90", linewidth = 0.3) +
-      geom_line(aes(y = ChildrenInTarget, group = DenomType, linetype = raw_denom_label), 
-                color = "#0058AB", linewidth = 0.8, alpha = 0.6, na.rm = TRUE) +
-      geom_point(aes(y = ChildrenInTarget, color = direction_switch), size = 2.5, na.rm = TRUE) +
+      geom_rect(data = switch_bands %>% filter(DenomType %in% unique(frozen_data$DenomType)),
+                aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf, fill = "Direction switch"),
+                alpha = 0.25, inherit.aes = FALSE) +
+      geom_segment(data = seg_data %>% filter(DenomType %in% unique(frozen_data$DenomType)),
+                   aes(x = Year, xend = x_end, y = ChildrenInTarget, yend = y_end, color = seg_color),
+                   linewidth = 0.8) +
+      geom_point(aes(y = ChildrenInTarget, color = pct_color), size = 2.5, na.rm = TRUE) +
       facet_wrap(~DenomType) +
       scale_y_continuous(
         name = raw_denom_label,
@@ -937,19 +959,23 @@ if(denom_data_available) {
         #labels = function(x) ifelse(x %% 2 == 0, as.character(x), "")
       ) +
       scale_color_manual(
-        name = NULL,
-        values = c("normal" = "#0058AB", "switch" = "#E2231A"),
-        labels = c("normal" = "Normal Trend", "switch" = "Direction Switch"),
-        breaks = c("switch", "normal")
+        name   = NULL,
+        values = c("low" = "#2CA02C", "mid" = "orange", "high" = "#E2231A", "none" = "black"),
+        labels = c("low"  = t_lookup("label_change_low", language),
+                   "mid"  = t_lookup("label_change_mid", language),
+                   "high" = t_lookup("label_change_high", language),
+                   "none" = t_lookup("label_no_prev_year", language)),
+        breaks = c("high", "mid", "low", "none"), na.translate = FALSE
       ) +
-      scale_linetype_manual(
-        name = NULL,
-        values = setNames("solid", raw_denom_label),
-        guide = guide_legend(order = 2, override.aes = list(color = "#0058AB", linewidth = 1))
+      scale_fill_manual(
+        name   = NULL,
+        values = c("Direction switch" = "#1CABE2"),
+        labels = c("Direction switch" = t_lookup("label_direction_switch", language)),
+        guide  = guide_legend(order = 2, override.aes = list(alpha = 0.9))
       ) +
       guides(
-        color    = guide_legend(title = NULL, order = 1),
-        linetype = guide_legend(title = NULL, order = 2)
+        color = guide_legend(title = NULL, order = 1),
+        fill  = guide_legend(title = NULL, order = 2)
       ) +
       theme_minimal() +
       theme(
@@ -959,15 +985,17 @@ if(denom_data_available) {
         panel.grid.minor   = element_blank(),
         strip.background   = element_rect(fill = "#0083CF"),
         strip.text         = element_text(color = "white", face = "bold"),
+        axis.line.y.left   = element_line(color = "black"),
         axis.ticks.x       = element_line(color = "black"),
         axis.ticks.y       = element_line(color = "black"),
-        axis.text.x        = element_text(angle = 45, hjust = 1, size = 8),
-        axis.title.x = element_blank(),
+        axis.text.x        = element_text(angle = 45, hjust = 1, size = 9),
+        axis.text.y.left   = element_text(color = "black", size = 9),
+        axis.title.x       = element_blank(),
         plot.title         = element_text(hjust = 0.5, size = 14),
-        plot.subtitle      = element_text(hjust = 0.5, size = 11)
+        plot.caption       = element_text(size = 9)
       ) +
       labs(
-        title   = paste0(get_text2("txt_denom_stability", text_vars), ", ", .current_country, ", ", min_yr_plots, "–", rev_yr),
+        title   = frozen_title,
         x       = t_lookup("axis_year", language),
         caption = get_text2("txt_caption_missing_admin", text_vars)
       )
@@ -1037,6 +1065,11 @@ dropout_rates <- dropout_long %>%
   }) %>%
   ungroup()
 
+# round dropout percentages to nearest 1% then set "is_negative" to FALSE if dropout pct is 0
+dropout_rates <- dropout_rates %>%
+  mutate(dropout_pct = round(dropout_pct)) %>% 
+  mutate(is_negative = ifelse(dropout_pct == 0, FALSE, is_negative))
+
 # highest and lowest values between admin coverage and dropout pct, rounded up or down to nearest 10%
 max_y <- ceiling(max(max(dropout_long$Admin, na.rm = TRUE), max(dropout_rates$dropout_pct, na.rm = TRUE)) / 10) * 10
 min_y <- floor(min(min(dropout_long$Admin, na.rm = TRUE), min(dropout_rates$dropout_pct, na.rm = TRUE)) / 10) * 10
@@ -1090,62 +1123,14 @@ plt_dropout_with_rate <- ggplot() +
     axis.ticks.x = element_line(color = "black"),
     axis.title.x = element_blank(),
     axis.ticks.y = element_line(color = "black"),
-    axis.text.x  = element_text(angle = 45, hjust = 1, size = 8),
+    axis.text.x  = element_text(angle = 45, hjust = 1, size = 9),
+    axis.text.y  = element_text(size = 9),
     plot.title = element_text(hjust = 0.5, size = 14),
     plot.subtitle = element_text(hjust = 0.5, size = 11),
     panel.grid.minor.x = element_blank()
   )
 
 plt_dropout_with_rate
-
-## ---------------------------------------------------------------------------------------------------------------------
-### DTP3-PCVC Co-administration Plot
-## ---------------------------------------------------------------------------------------------------------------------
-
-selected_coadmin <- wuenic_master_current %>% 
-  filter(Vaccine %in% c("DTP3", "PCVC"))
-
-plt_coadmin_dtp_pcv <- ggplot(selected_coadmin, aes(x = Year, y = Admin, color = Vaccine)) +
-  geom_hline(yintercept = 100, linetype = "dashed", color = "black", alpha = 0.8) +
-  geom_line(linewidth = 1, alpha = 0.7) +
-  geom_point(size = 2.5) +
-  scale_color_manual(values = c("DTP3" = "#0058AB", "PCVC" = "#E87722")) + 
-  scale_y_continuous(limits = c(0, max(c(105, max(selected_coadmin$Admin, na.rm = TRUE)))), 
-                     breaks = seq(0, 150, by = 10), labels = scales::label_number(suffix = "%")) +
-  scale_x_continuous(breaks = seq(min(selected_coadmin$Year), max(selected_coadmin$Year))) +
-  theme_minimal() +
-  labs(
-    title = paste0(t_lookup("title_admin_coadministered", language), ", ", .current_country, ", ", min_yr_plots, "–", rev_yr),
-    x = t_lookup("axis_year", language), 
-    y = t_lookup("axis_admin_coverage_pct", language),
-    color = t_lookup("tbl_schedule_vaccine", language)
-  ) +
-  theme(
-    legend.position = "bottom",
-    axis.text.x  = element_text(angle = 45, hjust = 1, size = 9),
-    axis.text.y = element_text(size = 9),
-    axis.title.x = element_blank(),
-    axis.ticks.x = element_line(color = "black"),
-    axis.ticks.y = element_line(color = "black"),
-    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.6),
-    strip.background = element_rect(fill = "#0083CF"),
-    strip.text = element_text(color = "white", face = "bold"),
-    plot.title = element_text(hjust = 0.5, size = 14),
-    panel.grid.minor.x = element_blank()
-  )
-
-plt_coadmin_dtp_pcv
-
-# get which time the dtp3 and pcvc vaccines are administered
-dtp3_pcvc_time <- tbl_schedule_r %>%
-  filter(Vaccine %in% c("PCV", "DTAPHIBHEPBIPV", "DTWPHIBHEPB", "DTAPHIBIPV", "DTAPIPV", "DTWPHIBHEPBIPV",
-                        "DTAP", "DTAPHIBHEPB", "DTAPHEPBIPV", "DTAPHIB", "DTWP")) %>%
-  pivot_longer(cols = any_of(as.character(1:20)), names_to = "dose_num", values_to = "age") %>%
-  filter(dose_num == 3) %>% 
-  select(Vaccine, age) %>%
-  distinct() %>%
-  pivot_wider(names_from = Vaccine, values_from = age) %>% 
-  pull(1)
 
 ## ---------------------------------------------------------------------------------------------------------------------
 ### Co-administration Plot: Dynamic schedule check — clusters based on shared time points
@@ -1249,16 +1234,20 @@ if ("6 weeks" %in% names(coadmin_pairs) & "14 weeks" %in% names(coadmin_pairs)) 
 
 #message(paste0("Co-administration clusters detected for ", .current_country, ": ", paste(names(coadmin_pairs), collapse = ", ")))
 
-# text labels for each cluster
+# text labels for each cluster - removed "missing" text as we are focusing on WUENIC vaccines only
 coadmin_labels <- purrr::imap_chr(coadmin_pairs, function(vaccines, cluster_name) {
   
   available <- vaccines[vaccines %in% available_vaccines]
-  missing   <- vaccines[!vaccines %in% available_vaccines]
+  #missing   <- vaccines[!vaccines %in% available_vaccines]
   
   # make strings to put in the translated text
   vaccine_list    <- paste(vaccines, collapse = ", ")
-  missing_list    <- paste(missing, collapse = ", ")
+  #missing_list    <- paste(missing, collapse = ", ")
   current_country <- .current_country 
+  
+  # select only the WUENIC vaccines from the cluster for the intro text
+  wuenic_at_time_point <- vaccines[vaccines %in% wuenic_vaccines]
+  wuenic_at_time_point <- paste(wuenic_at_time_point, collapse = ", ")
 
   intro_template <- if (length(available) > 0) {
     t_lookup("coadmin_intro_available", language)
@@ -1267,42 +1256,47 @@ coadmin_labels <- purrr::imap_chr(coadmin_pairs, function(vaccines, cluster_name
   }
   intro_text <- str_glue(intro_template)
   
-  missing_text <- if (length(missing) > 0) {
-    missing_template <- t_lookup("coadmin_missing_notes", language)
-    str_glue(missing_template)
-  } else {
-    get_text2("txt_all_antigens_present", text_vars)
-  }
+  # missing_text <- if (length(missing) > 0) {
+  #   missing_template <- t_lookup("coadmin_missing_notes", language)
+  #   str_glue(missing_template)
+  # } else {
+  #   get_text2("txt_all_antigens_present", text_vars)
+  # }
   
-  paste0(intro_text, "\n\n", missing_text)
+  paste0(intro_text)
+  #paste0(intro_text, "\n\n", missing_text)
 })
 
 coadmin_labels_all <- purrr::imap_chr(coadmin_pairs_all, function(vaccines, cluster_name) {
   available <- vaccines[vaccines %in% available_vaccines]
-  missing   <- vaccines[!vaccines %in% available_vaccines]
+  #missing   <- vaccines[!vaccines %in% available_vaccines]
   vaccine_list    <- paste(vaccines, collapse = ", ")
-  missing_list    <- paste(missing, collapse = ", ")
+  #missing_list    <- paste(missing, collapse = ", ")
   current_country <- .current_country
+  wuenic_at_time_point <- vaccines[vaccines %in% wuenic_vaccines]
+  wuenic_at_time_point <- paste(wuenic_at_time_point, collapse = ", ")
   intro_template <- if (length(available) > 0) {
     t_lookup("coadmin_intro_available", language)
   } else {
     t_lookup("coadmin_intro_empty", language)
   }
   intro_text <- str_glue(intro_template)
-  missing_text <- if (length(missing) > 0) {
-    missing_template <- t_lookup("coadmin_missing_notes", language)
-    str_glue(missing_template)
-  } else {
-    get_text2("txt_all_antigens_present", text_vars)
-  }
-  paste0(intro_text, "\n\n", missing_text)
+  # missing_text <- if (length(missing) > 0) {
+  #   missing_template <- t_lookup("coadmin_missing_notes", language)
+  #   str_glue(missing_template)
+  # } else {
+  #   get_text2("txt_all_antigens_present", text_vars)
+  # }
+  paste0(intro_text)
 })
 
 # translation lookup for the cluster names
 cluster_name_translations <- c(
   "6 weeks"  = get_text2("txt_timepoint_6weeks", text_vars),
   "10 weeks" = get_text2("txt_timepoint_10weeks", text_vars),
-  "14 weeks" = get_text2("txt_timepoint_14weeks", text_vars)
+  "14 weeks" = get_text2("txt_timepoint_14weeks", text_vars),
+  "2 months" = get_text2("txt_timepoint_2months", text_vars),
+  "4 months" = get_text2("txt_timepoint_4months", text_vars)
 )
 
 # build plot data for all clusters
@@ -1367,6 +1361,9 @@ plot_data_numerator_clusters_bars_all <- purrr::map_dfr(names(coadmin_pairs_all)
     filter(Vaccine %in% vaccines_to_plot) %>%
     mutate(cluster = cluster_name)
 })
+
+# reorder vaccines
+coadmin_pairs_all <- coadmin_pairs_all[order(as.numeric(gsub("[^0-9]", "", names(coadmin_pairs_all))))]
 
 # generate plots
 plt_numerators_coadmin_bars <- purrr::imap(coadmin_pairs_all, function(vaccines, cluster_name) {
@@ -1547,7 +1544,7 @@ plt_numerator_list <- purrr::imap(coadmin_pairs, function(vaccines, cluster_name
 plt_numerator_list <- Filter(Negate(is.null), plt_numerator_list)
 
 # ======================================================================================================================
-### Missing Data Heatmap (Admin Data)
+### Admin Data Availability Heatmap
 # ======================================================================================================================
 
 # vaccine name mapping
@@ -1657,7 +1654,7 @@ plt_missing_heatmap <- ggplot(heatmap_data_wuenic, aes(x = factor(Year), y = fct
     axis.title.y = element_blank(),
     panel.grid     = element_blank(),
     legend.position = "bottom",
-    plot.title     = element_text(hjust = 0.5, size = 14)
+    plot.title = element_text(hjust = 0.5, size = 14, margin = margin(b = 15))
   )
 plt_missing_heatmap
 

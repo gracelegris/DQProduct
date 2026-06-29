@@ -8,11 +8,11 @@ source(file.path(dqfolder, "R/label_vals.R"))
 source(file.path(dqfolder, "R/funcs.R"))
 source(str_glue("{utils}/R/slide_general_funcs.R"))    # func_slide_v, func_slide_bb, etc.
 source(str_glue("{utils}/R/slide_production_funcs.R")) # func_slide_v_txt, func_slide_v_tlm, etc.
-source(paste0(SubnatFuncDir, "/user_functions_outliers.R"))
-source(paste0(SubnatFuncDir, "/data_quality_funcs.R"))
+#source(paste0(SubnatFuncDir, "/user_functions_outliers.R"))
+#source(paste0(SubnatFuncDir, "/data_quality_funcs.R"))
 
 # regional info file
-regional_info <- read_csv(file.path(DummyUtils, "regional-groups_2026-release.csv"))
+regional_info <- read_csv(file.path(utils, "regional-groups_2026-release.csv"))
 
 # read in wiise schedule (new version that has the most recent year of schedule data for each country, not just rev_yr)
 wiise_schedule <- read_excel(str_glue("{wiisefolder}/output/wiise-schedule-dta_mostrecent.xlsx"))
@@ -23,6 +23,9 @@ wiise_stockouts <- read_excel(str_glue("{wiisefolder}/output/wiise-stock-dta_{re
 
 # vaccine levels
 vaccine_levels <- c("BCG","HepBB","DTP1","DTP3","Hib3","HepB3","PCVC","RotaC","IPV1","IPVC","MCV1","RCV1","MCV2","YFV","MengA","HPVc")
+
+# wuenic vaccines
+wuenic_vaccines <- c("BCG", "DTP1", "DTP3", "HepB3", "Hib3", "IPV1", "IPVC", "MCV1", "MCV2", "PCVC", "RotaC")
 
 # clean vaccine names
 wiise_intro <- wiise_intro %>%
@@ -90,7 +93,7 @@ wuenic_stockouts_clean <- wiise_stockouts %>%
   distinct()
 
 # ad_comments data from wiisemart
-comments <- read.csv(file.path(DataDir, "data_export_WIISE_AD_COMMENTS.csv")) %>% 
+comments <- read.csv(file.path(dqfolder, "Data/data_export_WIISE_AD_COMMENTS.csv")) %>% 
   rename(iso3c = COUNTRY, year = YEAR) %>% 
   filter(CMT_FIELDS %in% c("FCTACCNUMERCMT", "FCTACCDENOMSOURCECMT", "FCTACCDENOMCMT")) %>% 
   mutate(CMT_FIELDS = case_when(
@@ -102,7 +105,7 @@ comments <- read.csv(file.path(DataDir, "data_export_WIISE_AD_COMMENTS.csv")) %>
   arrange(iso3c, year)
 
 # HPV data
-hpv_dta <- read_excel(str_glue(file.path(HPVDir, '{hpv_rev_yr} revision/final/hpv_estimates_wuenic{hpv_rev_yr}rev.xlsx'))) %>%
+hpv_dta <- read_excel(str_glue(file.path(HPVDir, '{hpv_rev_yr} revision/{type}/hpv_estimates_wuenic{hpv_rev_yr}rev.xlsx'))) %>%
   filter(lvl_2 %in% c("region_unicef_global_old", "region_unicef_ops")) %>%
   mutate(vaccine = case_when(
     # programme coverage
@@ -124,3 +127,4 @@ hpv_dta <- clean_reg_names(hpv_dta)  %>% # clean region names
   filter(!is.na(coverage)) %>%
   select(lvl_1, lvl_2, lvl_3, iso3c, country, year, vaccine_code, vaccine, coverage) %>%
   mutate(coverage = round(coverage, 0))
+
