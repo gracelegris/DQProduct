@@ -12,7 +12,7 @@ source("user_profiles.R")
 language <- "en"
 
 # get unique list of countries
-wuenic_master <- read.csv(file.path(DummyDataDir, "wuenic-master_2025rev.csv"))
+wuenic_master <- read.csv(file.path(DataDir, "wuenic-master_2025rev.csv"))
 countries <- unique(wuenic_master$Country)
 
 # ── LANGUAGE SETUP ────────────────────────────────────────────────────────────
